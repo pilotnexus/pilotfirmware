@@ -1,0 +1,56 @@
+﻿//import "../grammar/stm.stg"
+
+IncludeGuardBegin(headerfileName) ::= <<
+#ifndef <headerfileName>
+#define <headerfileName>
+>>
+
+IncludeGuardEnd(headerfileName) ::= <<
+#endif
+>>
+
+Header() ::= <<
+/*
+  this file was auto-generated
+*/
+>>
+
+Render(model) ::= <<
+
+<Header()>
+<IncludeGuardBegin(model.HeaderfileName)>
+
+<RenderBody(model)>
+
+<IncludeGuardEnd(model.HeaderfileName)>
+
+>>
+
+m(name) ::= "m_<name>"
+
+/* declares the usart functions and config member variable */
+Usart(usart) ::= <<
+
+void rpc_<usart.Name>_init(void);
+
+uint8_t rpc_<usart.Name>_receive_char(void);
+
+void rpc_<usart.Name>_send_char(char c);
+
+void rpc_<usart.Name>_set_baudrate(int baudrate);
+
+void rpc_<usart.Name>_set_stopbits(uint16_t stopbits);
+
+void rpc_<usart.Name>_set_parity(uint16_t parity);
+
+void rpc_<usart.Name>_set_wordlength(uint16_t wordlength);
+
+>>
+
+RenderBody(model) ::= <<
+
+#include "stm32_conf.h"
+
+<model.Usarts:{usart|<Usart(usart)>}>
+
+>>

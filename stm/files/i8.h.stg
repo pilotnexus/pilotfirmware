@@ -1,0 +1,51 @@
+﻿//import "../grammar/stm.stg"
+
+IncludeGuardBegin(headerfileName) ::= <<
+#ifndef <headerfileName>
+#define <headerfileName>
+>>
+
+IncludeGuardEnd(headerfileName) ::= <<
+#endif
+>>
+
+Header() ::= <<
+/*
+  this file was auto-generated
+*/
+>>
+
+Render(model) ::= <<
+
+<Header()>
+<IncludeGuardBegin(model.HeaderfileName)>
+
+<RenderBody(model)>
+
+<IncludeGuardEnd(model.HeaderfileName)>
+
+>>
+
+m(name) ::= "m_<name>"
+
+/* declares the i8 functions */
+I8(i8) ::= <<
+
+/* initializes the i8 module */
+void <i8.Name>_init(void);
+
+/* send the state of the input to the rpi */
+uint8_t <i8.Name>_get_state(uint8_t input);
+<if(model.PLC)>
+void <i8.Name>_plc_read(unsigned char *target);
+<endif>
+>>
+
+RenderBody(model) ::= <<
+
+#include "io_stm.h"
+
+<! functions foreach i8 module !>
+<model.I8s:{i8|<I8(i8)>};separator="\n">
+
+>>

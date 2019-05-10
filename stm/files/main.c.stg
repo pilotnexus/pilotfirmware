@@ -1,0 +1,421 @@
+// import "../grammar/stm.stg"
+
+Header() ::= <<
+/*
+  this file was auto-generated
+*/
+>>
+
+IncludeGuardBegin(headerfileName) ::= <<
+#ifndef <headerfileName>
+#define <headerfileName>
+>>
+
+IncludeGuardEnd(headerfileName) ::= <<
+#endif
+>>
+
+m(name) ::= "m_<name>"
+
+usart_callback(usart) ::= <<
+/* gets called by the interrupt handler for <usart.Name> */
+void rpc_<usart.Name>_receive()
+{
+  uint16_t data;
+
+  if (USART_GetITStatus(<usart.Name>, USART_IT_RXNE) != RESET)
+  {
+    /* receive from the <usart.Name> */
+    data = rpc_<usart.Name>_receive_char();
+
+    /* enqueue the data in usart send2rpi queue */
+    rpcp_pilot_comm_enqueue_usart(get_spi_data(target_t_from_module_slot_and_port(<usart.ModuleSlot>, <usart.ModulePort>), data));
+
+    /* pull the DATA pin high to signal available data */
+    GPIO_WriteBit(GPIO_Pin_BOARD, GPIO_Pin_DATA_M2R, Bit_SET);
+  }
+}
+
+>>
+
+senddata(module) ::= <<
+>>
+
+
+Render(model) ::= <<
+
+<Header()>
+#include "plc.h"
+#include \<limits.h>
+#include "stm32_conf.h"
+#include "gpio_config.h"
+#include "delay.h"
+#include "it_callback.h"
+#include "ia8.h"
+#include "pilot_comm.h"
+#include "usart.h"
+#include "pwm.h"
+#include "i8.h"
+#include "o8.h"
+#include "pilot_usart.h"
+#include "gps.h"
+#include "gsm.h"
+#include "rtc.h"
+#include "counter8.h"
+#include "io16.h"
+#include "onewire.h"
+#include "eeprom.h"
+#include "spi.h"
+#include "test.h"
+#include "fpga.h"
+#include "aio20.h"
+#include "main.h"
+
+extern void init_plugins();
+extern void init_custom();
+extern void before_loop_plugins();
+extern void before_loop_custom();
+extern void after_loop_plugins();
+extern void after_loop_custom();
+
+
+// hard fault handler in C,
+// with stack frame location as input parameter
+// called from HardFault_Handler in file xxx.s
+void hard_fault_handler_c (unsigned int * hardfault_args)
+{
+  unsigned int stacked_r0;
+  unsigned int stacked_r1;
+  unsigned int stacked_r2;
+  unsigned int stacked_r3;
+  unsigned int stacked_r12;
+  unsigned int stacked_lr;
+  unsigned int stacked_pc;
+  unsigned int stacked_psr;
+ 
+  stacked_r0 = ((unsigned long) hardfault_args[0]);
+  stacked_r1 = ((unsigned long) hardfault_args[1]);
+  stacked_r2 = ((unsigned long) hardfault_args[2]);
+  stacked_r3 = ((unsigned long) hardfault_args[3]);
+ 
+  stacked_r12 = ((unsigned long) hardfault_args[4]);
+  stacked_lr = ((unsigned long) hardfault_args[5]);
+  stacked_pc = ((unsigned long) hardfault_args[6]);
+  stacked_psr = ((unsigned long) hardfault_args[7]);
+ 
+  rpcp_pilot_usart_send_formatted_string ("\n\n[Hard fault handler - all numbers in hex]\n");
+  rpcp_pilot_usart_send_formatted_string ("R0 = %x\n", stacked_r0);
+  rpcp_pilot_usart_send_formatted_string ("R1 = %x\n", stacked_r1);
+  rpcp_pilot_usart_send_formatted_string ("R2 = %x\n", stacked_r2);
+  rpcp_pilot_usart_send_formatted_string ("R3 = %x\n", stacked_r3);
+  rpcp_pilot_usart_send_formatted_string ("R12 = %x\n", stacked_r12);
+  rpcp_pilot_usart_send_formatted_string ("LR [R14] = %x  subroutine call return address\n", stacked_lr);
+  rpcp_pilot_usart_send_formatted_string ("PC [R15] = %x  program counter\n", stacked_pc);
+  rpcp_pilot_usart_send_formatted_string ("PSR = %x\n", stacked_psr);
+  rpcp_pilot_usart_send_formatted_string ("BFAR = %x\n", (*((volatile unsigned long *)(0xE000ED38))));
+  rpcp_pilot_usart_send_formatted_string ("CFSR = %x\n", (*((volatile unsigned long *)(0xE000ED28))));
+  rpcp_pilot_usart_send_formatted_string ("HFSR = %x\n", (*((volatile unsigned long *)(0xE000ED2C))));
+  rpcp_pilot_usart_send_formatted_string ("DFSR = %x\n", (*((volatile unsigned long *)(0xE000ED30))));
+  rpcp_pilot_usart_send_formatted_string ("AFSR = %x\n", (*((volatile unsigned long *)(0xE000ED3C))));
+  rpcp_pilot_usart_send_formatted_string ("SCB_SHCSR = %x\n", SCB->SHCSR);
+  
+  while (1);
+}
+/* init systick interrupt */
+static void rpc_systick_init()
+{
+  int priority;
+
+  /* configure the systick timer interval: 1000 -> 1ms interval */
+  if (SysTick_Config(SystemCoreClock / 1000))
+    while(1); /* capture error */
+
+  /* calculate the priority value */
+  priority = NVIC_EncodePriority(NVIC_PriorityGroup_0, 0, 2);
+
+  /* set the priority value of the systick interrupt */
+  NVIC_SetPriority(SysTick_IRQn, priority);
+}
+
+static void rpc_send_startup_message()
+{
+  rpcp_pilot_usart_send_string("PiloT\r\n");
+  rpcp_pilot_usart_send_string("Version: <model.CodeGen.Version>\r\n");
+  rpcp_pilot_usart_send_string("Date: <model.CodeGen.Date>\r\n");
+  rpcp_pilot_usart_send_string("ToolChain: <model.CodeGen.ToolChain>\r\n");
+  #ifdef DEBUG
+  rpcp_pilot_usart_send_string("DEBUG enabled\r\n");
+  //<model.PLC.LocatedVariables.MemoryLocations:{m|rpcp_pilot_usart_send_formatted_string("PLC memory region : <m.Location>: 0x%x\r\n", (int)located_<m.Location>);};separator="\n"> 
+  #endif
+<if (model.IsTest)>
+  rpcp_pilot_usart_send_string("Test run: enabled\r\n");
+<else>
+  rpcp_pilot_usart_send_string("Test run: disabled\r\n");
+<endif>
+
+  /* module usage */
+  <model.Modules:{m|rpcp_pilot_usart_send_string("m<m.Slot>: <m.Name>\r\n");};separator="\n">
+
+  	rpcp_pilot_usart_send_string("Last Reset reason: ");
+	  // test the reset flags in order because the pin reset is always set. 
+	if (RCC_GetFlagStatus(RCC_FLAG_PORRST)) {
+		rpcp_pilot_usart_send_string("POR/PDR reset\r\n");
+	}
+	else if (RCC_GetFlagStatus(RCC_FLAG_SFTRST)) {
+		rpcp_pilot_usart_send_string("Software reset\r\n");
+	}
+	else if (RCC_GetFlagStatus(RCC_FLAG_IWDGRST)) {
+		rpcp_pilot_usart_send_string("Independent watchdog reset\r\n");
+	}
+	else if (RCC_GetFlagStatus(RCC_FLAG_WWDGRST)) {
+		rpcp_pilot_usart_send_string("Window watchdog reset\r\n");
+	}
+	else if (RCC_GetFlagStatus(RCC_FLAG_LPWRRST)) {
+		rpcp_pilot_usart_send_string("Low-power reset\r\n");
+	}
+	else if (RCC_GetFlagStatus(RCC_FLAG_PINRST)) {
+		rpcp_pilot_usart_send_string("PIN reset\r\n");
+	}
+	else {
+		rpcp_pilot_usart_send_string("unknown");
+	}
+}
+
+static void rpcp_send_eeprom_uids()
+{
+  int i; bool presence;
+  rpcp_eeprom_uid_t uid;
+  rpcp_eeprom_hid_t hid;
+
+  rpcp_pilot_usart_send_string("Module uids:\r\n");
+  for (i = 0; i \< MODULES_COUNT; i++)
+  {
+    /* get the uid */
+    presence = rpcp_eeprom_get_module_uid((module_slot_t)i, &uid);
+
+    /* get the hid */
+    rpcp_eeprom_get_module_hid((module_slot_t)i, &hid);
+
+    /* module X: OK*/
+    rpcp_pilot_usart_send_string("module ");
+    rpcp_pilot_usart_send_char(i + 0x30);
+    rpcp_pilot_usart_send_string(": ");
+    rpcp_pilot_usart_send_string(presence ? "OK" : "  ");
+    rpcp_pilot_usart_send_string("\r\n");
+
+    /*     uid: 0xXX 0xXX 0xXX 0xXX 0xXX 0xXX 0xXX 0xXX */
+    rpcp_pilot_usart_send_string("\tuid: ");
+    rpcp_pilot_usart_send_bytes_as_hex(uid.uid, EEPROM_UID_LENGTH);
+
+    /*     hid: 0xXX 0xXX 0xXX 0xXX 0xXX 0xXX 0xXX 0xXX string: '' */
+    rpcp_pilot_usart_send_string("\r\n\thid: ");
+    rpcp_pilot_usart_send_bytes_as_hex(hid.data, EEPROM_HID_LENGTH);
+    rpcp_pilot_usart_send_string(" = '");
+    rpcp_pilot_usart_send_chars((char*)hid.data, EEPROM_HID_LENGTH);
+    rpcp_pilot_usart_send_string("'\r\n");
+  }
+}
+
+volatile int module_inputs_changed = -1;
+static void rpc_handle_module_inputs_changed()
+{
+  int slot;
+
+  if (module_inputs_changed > -1)
+  {
+    slot = module_inputs_changed;
+
+    /* mark the cmd as handled */
+    module_inputs_changed = -1;
+
+    switch (slot)
+    {
+<model.IO16s:{io16|
+      case <io16.Slot>:
+        rpc_<io16.Name>_set_irq_handled();
+        break;
+};separator="\n">
+    }
+
+    /* send the input changed cmd */
+    rpcp_pilot_comm_send_input_changed((module_slot_t)slot);
+  }
+}
+
+static void rpc_enter_main_loop()
+{ 
+  init_plugins();
+  init_custom();
+
+  while(1)
+  {
+    DWT_CycCounterClear();
+
+    rpcp_handle_received_data();
+    rpc_handle_module_inputs_changed();
+    before_loop_plugins();
+    before_loop_custom();
+	  plc_loop();
+    after_loop_plugins();
+    after_loop_custom();
+  }
+}
+
+int main(void)
+{
+  /* make sure SystemCoreClock is updated */
+  SystemCoreClockUpdate();
+
+  DWT_Enable(); //activate DWT-unit
+  DWT_CycCounterEn(); // enable CPU cycle counter
+
+  /* enable the systick interrupt */
+  rpc_systick_init();
+
+  /* initializes USART1 for debug messages */
+  rpcp_pilot_usart_init();
+
+  /* initializes raspberry pi spi communication */
+  rpcp_pilot_comm_init();
+
+  /* send a message over rs232 to rpi's /dev/ttyAMA0 */
+  rpc_send_startup_message();
+
+  /* initialize communication with the eeproms */
+  rpcp_eeprom_init();
+
+  /* output the module uids */
+  rpcp_send_eeprom_uids();
+
+  /* enable the rtc */
+  rtc_init();
+
+<if(model.SPIs)>
+  /* initialize spi */
+  rpcp_spi_setup();
+<endif>
+
+<if(model.Usarts)>
+  /* initialize usarts */
+  <model.Usarts:{usart|rpc_<usart.Name>_init();};separator="\n">
+<endif>
+  
+<if(model.Pwms)>
+  /* initialize pwms */
+  <model.Pwms:{pwm|<pwm.Name>_init();};separator="\n">
+<endif>
+
+<if(model.I8s)>
+  /* initialize the i8s */
+  <model.I8s:{i8|<i8.Name>_init();};separator="\n">
+<endif>
+
+<if (model.O8s)>
+  /* initialize the o8s */
+  <model.O8s:{o8|rpcp_<o8.Name>_init();};separator="\n">
+<endif>
+
+<if(model.Counter8s)>
+  /* initialize the counters */
+  <model.Counter8s:{counter|rpcp_<counter.Name>_init();};separator="\n">
+<endif>
+
+<if(model.GPSs)>
+  /* initialize the gps */
+  <model.GPSs:{gps|rpc_<gps.Name>_init();};separator="\n">
+<endif>
+
+<if(model.LORAs)>
+  /* initialize the lora */
+  <model.LORAs:{lora|rpc_<lora.Name>_init();};separator="\n">
+<endif>
+
+<if (model.GSMs)>
+  /* initialize the gsm */
+  <model.GSMs:{gsm|rpcp_<gsm.Name>_init();};separator="\n">
+<endif>
+
+<if(model.IO16s)>
+  /* initialize the io16 */
+  <model.IO16s:{io16|rpc_<io16.Name>_init();};separator="\n">
+<endif>
+
+<if(model.OneWires)>
+  /* intialize the one wire */
+  <model.OneWires:{ow|rpc_<ow.Name>_init();};separator="\n">
+<endif>
+
+<if(model.SLCDs)>
+  /* initialize the sharp lcd driver */
+  <model.SLCDs:{slcd|rpcp_<slcd.Name>_init();};separator="\n">
+<endif>
+
+<if(model.FPGAs)>
+  /* initialize the FPGA driver */
+  <model.FPGAs:{fpga|rpcp_<fpga.Name>_init();};separator="\n">
+<endif>
+
+<if(model.AIO20s)>
+  <model.AIO20s:{aio20|rpcp_<aio20.Name>_init();};separator="\n">
+<endif>
+
+<if(model.PLC)>
+//init module settings
+init_plc_modules();
+<endif>
+
+<if(model.IsTest)>
+  /* initialize the test */
+  rpcp_test_init();
+<endif>
+
+  rpcp_pilot_usart_send_string("entering main loop.");
+
+  /* entering main loop */
+  rpc_enter_main_loop();
+}
+
+////////////////////////////////////
+// interrupt handler 
+
+/* rpc_systick is called every millisecond */
+void rpc_systick()
+{
+  <if(model.PLC)>
+  plc_tick();
+  <endif>
+
+  /* increment the timeout counter */
+  rpcp_pilot_comm_increment_cmd_timeout();
+}
+
+<if(model.IO16s)>
+/* define io16 input changed irq callback */
+void rpc_io16_input_changed(int slot)
+{
+  module_inputs_changed = slot;
+}
+<endif>
+
+<if(model.Usarts)>
+/* define usart receive callback handler */
+<model.Usarts:{usart|<usart_callback(usart)>};separator="\n">
+<endif>
+
+/* gets called by the interrupt handler when a counter needs to be incremented */
+void rpc_counter_increment(int counter)
+{
+  /* increment the counter */
+  <model.counter8s:{counter8|
+  rpcp_<counter8.Name>_increment_counter(counter);
+  };separator="\n">
+}
+
+void pilot_spi_transmit_done()
+{
+  pilot_comm_spi_tx_done();
+}
+
+//////////////////////////////////////
+
+>>

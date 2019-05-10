@@ -1,0 +1,110 @@
+﻿
+/* assigns an output port from an input */
+assign(input, output) ::= "assign <output.Name> = <if(output.ConditionalAssign)><output.ConditionalAssign><else><if(input.InvertOnAssignment)>~<endif><input.Name><endif>;"
+
+assignment(assignment) ::= "<assign(assignment.Input, assignment.Output)>"
+
+/* create an instance of a module */
+module_instance(instance) ::=
+<<
+	<instance.Module.Name> <instance.InstanceName> (
+		<instance.Parameters:{p|.<p.Name>(<p.Value>)};separator=",\n">
+	);
+>>
+
+/* defines a pin, optionally with pin mapping if a number is defined */
+pin(pin) ::= "<if(pin.Number)>(* chip_pin=\"<pin.Number>\" *)<endif><pin.Direction> <pin.Name>;"
+
+/* defines a module */
+module(module) ::= <<
+
+<! module declaration !>
+module <module.Name>(
+	<module.Pins:{p|<p.Name>};separator=",\n">
+);
+
+<!pin definition !>
+<module.Pins:{p | < pin(p) > }; separator = "\n">
+
+<!miso out assignment !>
+<miso_assignment(module)>
+
+<!module instances !>
+<module.ModuleInstances:{instance | < module_instance(instance) > }; separator = "\n\n">
+
+<!assignments !>
+<module_assignment(module)>
+
+endmodule
+
+>>
+
+/* creates the miso out assignment code */
+miso_assignment(module) ::= <<
+<module.SPIs:{spi|
+<spi.Parameters:{p|wire <p.Miso>;};separator="\n">
+assign <spi.Miso> = 
+<spi.Parameters:{p|  !<p.CS> ? <p.Miso> : };separator="\n">
+  0;
+};separator="\n">
+>>
+
+/* creates the assignment code */
+module_assignment(module) ::= <<
+<! rs485 uses special assignment !>
+<if(module.IsRs485)>
+<rs485_assignment()>
+<elseif(module.IsPro)>
+<pro_assignment()>
+<elseif(module.IsRs485_2p)>
+<rs485_2p_assignment()>
+<elseif(module.IsRs485_4w)>
+<rs485_4w_assignment()>
+<else>
+<module.Assignments:{a|<assignment(a)>};separator="\n">
+<endif>
+>>
+
+/* creates the custom pro assignment */
+pro_assignment() ::= <<
+
+assign PRO_RX_OUT = (PRO_TX_IN == 1'b0) ? 1'b1 : PRO_RX_IN;
+assign PRO_TX_OUT = PRO_TX_IN;
+
+assign RE1 = 1;
+>>
+
+/* creates the custom rs485 assignment */
+rs485_assignment() ::= <<
+
+assign RS485_RX_OUT = (RS485_TX_IN == 1'b0) ? 1'b1 : RS485_RX_IN;
+assign RS485_TX_OUT = RS485_TX_IN;
+
+assign RE1 = 1;
+assign RE2 = 1;
+>>
+
+/* creates the custom rs485_2p assignment */
+rs485_2p_assignment() ::= <<
+
+assign RS485_RX1_OUT = (RS485_TX1_IN == 1'b0) ? 1'b1 : RS485_RX1_IN;
+assign RS485_TX1_OUT = RS485_TX1_IN;
+
+assign RS485_RX2_OUT = (RS485_TX2_IN == 1'b0) ? 1'b1 : RS485_RX2_IN;
+assign RS485_TX2_OUT = RS485_TX2_IN;
+
+assign RE1 = 1;
+assign RE2 = 1;
+
+>>
+
+/* creates the custom rs485_4w assignment */
+rs485_4w_assignment() ::= <<
+
+assign RS485_RX_OUT = RS485_RX_IN;
+assign RS485_TX_OUT = RS485_TX_IN;
+
+assign RE1 = 1;
+assign RE2 = 1;
+
+>>

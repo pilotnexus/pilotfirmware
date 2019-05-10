@@ -1,0 +1,56 @@
+﻿// import "../grammar/stm.stg"
+
+IncludeGuardBegin(headerfileName) ::= <<
+#ifndef <headerfileName>
+#define <headerfileName>
+>>
+
+IncludeGuardEnd(headerfileName) ::= <<
+#endif
+>>
+
+Header() ::= <<
+/*
+  this file was auto-generated
+*/
+>>
+
+Render(model) ::= <<
+
+<Header()>
+<IncludeGuardBegin(model.HeaderfileName)>
+
+<RenderBody(model)>
+
+<IncludeGuardEnd(model.HeaderfileName)>
+
+>>
+
+/* declares the counter8 functions */
+counter8(counter8) ::= <<
+
+void rpcp_<counter8.Name>_init(void);
+void rpcp_<counter8.Name>_get_counter_cmd(rpcp_cmd_t* cmd, int counter_index);
+void rpcp_<counter8.Name>_increment_counter(int counter_index);
+void rpcp_<counter8.Name>_set_counter(int counter_index, uint64_t value);
+
+>>
+
+RenderBody(model) ::= <<
+
+//#include "io_stm.h"
+#include "stm32_conf.h"
+#include "common_base.h"
+#include \<string.h>
+
+<! general define !>
+#define COUNTERS_COUNT 8
+
+#define counter8_get_state(state,i) (state & (1 \<\< i))
+
+<! functions foreach counter8 module !>
+<model.counter8s:{counter8|<counter8(counter8)>};separator="\n">
+
+void rpcp_counter8_set_counter(rpcp_cmd_t* cmd);
+
+>>

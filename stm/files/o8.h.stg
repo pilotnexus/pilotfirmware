@@ -1,0 +1,55 @@
+﻿//import "../grammar/stm.stg"
+
+IncludeGuardBegin(headerfileName) ::= <<
+#ifndef <headerfileName>
+#define <headerfileName>
+>>
+
+IncludeGuardEnd(headerfileName) ::= <<
+#endif
+>>
+
+Header() ::= <<
+/*
+  this file was auto-generated
+*/
+>>
+
+Render(model) ::= <<
+
+<Header()>
+<IncludeGuardBegin(model.HeaderfileName)>
+
+<RenderBody(model)>
+
+<IncludeGuardEnd(model.HeaderfileName)>
+
+>>
+
+m(name) ::= "m_<name>"
+
+/* declares the o8 functions */
+O8(o8) ::= <<
+
+/* initializes the o8 module */
+void rpcp_<o8.Name>_init(void);
+
+/* send the value of the output to the rpi */
+uint8_t rpcp_<o8.Name>_get_value(uint8_t output);
+
+/* set the value of the output */
+void rpcp_<o8.Name>_set_value(uint8_t output, bool value);
+<if(model.PLC)>
+void <o8.Name>_plc_write(unsigned char *target);
+<endif>
+>>
+
+RenderBody(model) ::= <<
+
+#include \<stdbool.h>
+#include "io_stm.h"
+
+<! functions foreach o8 module !>
+<model.O8s:{o8|<O8(o8)>};separator="\n">
+
+>>

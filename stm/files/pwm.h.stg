@@ -1,0 +1,44 @@
+﻿//import "../grammar/stm.stg"
+
+IncludeGuardBegin(headerfileName) ::= <<
+#ifndef <headerfileName>
+#define <headerfileName>
+>>
+
+IncludeGuardEnd(headerfileName) ::= <<
+#endif
+>>
+
+Header() ::= <<
+/*
+  this file was auto-generated
+*/
+>>
+
+Render(model) ::= <<
+
+<Header()>
+<IncludeGuardBegin(model.HeaderfileName)>
+
+<RenderBody(model)>
+
+<IncludeGuardEnd(model.HeaderfileName)>
+
+>>
+
+m(name) ::= "m_<name>"
+
+/* declares the pwm functions */
+Pwm(pwm) ::=
+<<
+void <pwm.Name>_init(void);
+>>
+
+
+RenderBody(model) ::= <<
+
+#include "stm32_conf.h"
+
+<model.Pwms:{pwm|<Pwm(pwm)>};separator="\n">
+
+>>

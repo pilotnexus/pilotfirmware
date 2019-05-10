@@ -1,0 +1,55 @@
+﻿//import "../grammar/stm.stg"
+
+IncludeGuardBegin(headerfileName) ::= <<
+#ifndef <headerfileName>
+#define <headerfileName>
+>>
+
+IncludeGuardEnd(headerfileName) ::= <<
+#endif
+>>
+
+Header() ::= <<
+/*
+  this file was auto-generated
+*/
+>>
+
+Render(model) ::= <<
+
+<Header()>
+<IncludeGuardBegin(model.HeaderfileName)>
+
+<RenderBody(model)>
+
+<IncludeGuardEnd(model.HeaderfileName)>
+
+>>
+
+m(name) ::= "m_<name>"
+
+/* 
+  this stringtemplate grammar file creates the mc_rtc.h header file
+*/
+
+RenderBody(model) ::= <<
+#include "stm32_conf.h"
+#include "types.h"
+#include "pilot_usart.h"
+#include \<stdio.h>
+#include \<string.h>
+
+#ifdef STM32F10X_HD
+#include \<time.h> /* stm32f10X lacks api support for time conversion, we use the standard c-library functions instead */
+#endif
+
+/* initialize the rtc */
+void rtc_init(void);
+
+/* fills the supplied cmd */
+void rtc_get_datetime_cmd(rpcp_cmd_t* cmd);
+
+/* sets the rtc datetime from the supplied command */
+void rtc_set_datetime_cmd(rpcp_cmd_t* cmd);
+
+>>
