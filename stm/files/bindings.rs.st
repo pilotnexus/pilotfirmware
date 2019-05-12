@@ -11,20 +11,20 @@ extern "C" {
   pub fn after_loop_plugins();
   pub fn after_loop_custom();
   // Main Loop Function End
-  /}
+  }
 
 pub fn serial_debug(format: &str) {
   unsafe {
       rpcp_pilot_usart_send_string(format.as_ptr());
-  /}
-/}
+  }
+}
 
 macro_rules! print {
-    ($f:expr) => (
+    (\$f:expr) => (
       unsafe {
-        for c in $f.chars() { 
+        for c in \$f.chars() { 
           rpcp_pilot_usart_send_char(c as u8);
-        /}
-      /}
+        }
+      }
    )
-/}
+}

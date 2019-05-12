@@ -1228,7 +1228,7 @@ static void rpcp_pilot_comm_get_module_type(module_slot_t module_slot)
 $model.Modules:{m|
     case $m.Slot$: strncpy(cmd.data, "$m.Name$", rpcp_cmd_t_data_size); break;
 };separator="\n"$
-    default: RETURN;
+    default: break;
   }
 
   /* send the reply */
@@ -1659,10 +1659,10 @@ static void rpcp_rpi_comm_stats(rpcp_cmd_t *cmd)
 }
 
 static void rpcp_rpi_fwinfo_cmd(rpcp_cmd_t *cmd) {
-  cmd->data[0] = $model.fwinfo.branch$;
-  cmd->data[1] = $model.fwinfo.version.major$;
-  cmd->data[2] = $model.fwinfo.version.minor$;
-  cmd->data[3] = $model.fwinfo.version.revision$;
+  cmd->data[0] = $model.Version.BranchValue$;
+  cmd->data[1] = $model.Version.Major$;
+  cmd->data[2] = $model.Version.Minor$;
+  cmd->data[3] = $model.Version.Patch$;
   cmd->length = MSG_LEN(4);
   rpcp_pilot_comm_send_cmd(cmd);
 }
