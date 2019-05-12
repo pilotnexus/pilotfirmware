@@ -22,12 +22,12 @@ bool MAX11300regWrite(int regAddress8, int regData16)
 
 void MAX11300initDelayus(int delay_us)
 {
-  rpcp_delay_us(delay_us);
+  pilot_delay_us(delay_us);
 }
 
 $model.AIO20s:{aio20|
 
-static void rpcp_$aio20.Name$_init_exti()
+static void pilot_$aio20.Name$_init_exti()
 {
   EXTI_InitTypeDef exti;
 
@@ -47,7 +47,7 @@ static void rpcp_$aio20.Name$_init_exti()
 
 \}
 
-static void rpcp_$aio20.Name$_init_nvic()
+static void pilot_$aio20.Name$_init_nvic()
 {
   /* enable and set EXTI Line Interrupt */
   NVIC_InitTypeDef nvic;
@@ -58,7 +58,7 @@ static void rpcp_$aio20.Name$_init_nvic()
   NVIC_Init(&nvic);
 \}
 
-static void rpcp_$aio20.Name$_init_gpio()
+static void pilot_$aio20.Name$_init_gpio()
 {
   GPIO_InitTypeDef gpio;
 
@@ -81,17 +81,17 @@ static void rpcp_$aio20.Name$_init_gpio()
 
 \}
 
-bool rpcp_$aio20.Name$_init()
+bool pilot_$aio20.Name$_init()
 {
   GPIO_InitTypeDef gpio;
   gpio.GPIO_Speed = GPIO_Speed_50MHz;
 
   /* configure the interrupt pin */
-  rpcp_$aio20.Name$_init_gpio();
+  pilot_$aio20.Name$_init_gpio();
 
   /* configure the interrupt on the stm for the fpga module */
-  rpcp_$aio20.Name$_init_exti();
-  rpcp_$aio20.Name$_init_nvic();
+  pilot_$aio20.Name$_init_exti();
+  pilot_$aio20.Name$_init_nvic();
 
   /* pull the chip select high to disable transfer */
   GPIO_WriteBit($aio20.SPI.NssPin.GPIO$, $aio20.SPI.NssPin.Pin$, Bit_SET);
@@ -122,7 +122,7 @@ bool rpcp_$aio20.Name$_init()
 
 };separator="\n"$
 
-void rpcp_AIO20_set_CNVT(uint8_t slot, BitAction bitVal)
+void pilot_AIO20_set_CNVT(uint8_t slot, BitAction bitVal)
 {
   switch (slot)
   {
@@ -156,11 +156,11 @@ static const uint16_t port_config_design_vals[20] = {
     //*********************************************************************
 void write_register(uint8_t slot, MAX11300RegAddress_t reg, uint16_t data)
 {
-  rpcp_spi_set_cs(slot_to_spi[slot], chip_select_enable);
-  rpcp_spi_dataexchange(slot_to_spi[slot],MAX11300Addr_SPI_Write(reg));
-  rpcp_spi_dataexchange(slot_to_spi[slot], ((0xFF00 & data) >> 8));
-  rpcp_spi_dataexchange(slot_to_spi[slot], (0x00FF & data));
-  rpcp_spi_set_cs(slot_to_spi[slot], chip_select_disable);
+  pilot_spi_set_cs(slot_to_spi[slot], chip_select_enable);
+  pilot_spi_dataexchange(slot_to_spi[slot],MAX11300Addr_SPI_Write(reg));
+  pilot_spi_dataexchange(slot_to_spi[slot], ((0xFF00 & data) >> 8));
+  pilot_spi_dataexchange(slot_to_spi[slot], (0x00FF & data));
+  pilot_spi_set_cs(slot_to_spi[slot], chip_select_disable);
 }
 
 //*********************************************************************    
@@ -168,11 +168,11 @@ uint16_t read_register(uint8_t slot, MAX11300RegAddress_t reg)
 {
     uint16_t rtn_val = 0;
     
-    rpcp_spi_set_cs(slot_to_spi[slot], chip_select_enable);
-    rpcp_spi_dataexchange(slot_to_spi[slot], MAX11300Addr_SPI_Read(reg));
-    rtn_val = (rpcp_spi_dataexchange(slot_to_spi[slot], 0x0) << 8); 
-    rtn_val |= rpcp_spi_dataexchange(slot_to_spi[slot], 0x0); 
-    rpcp_spi_set_cs(slot_to_spi[slot], chip_select_disable);
+    pilot_spi_set_cs(slot_to_spi[slot], chip_select_enable);
+    pilot_spi_dataexchange(slot_to_spi[slot], MAX11300Addr_SPI_Read(reg));
+    rtn_val = (pilot_spi_dataexchange(slot_to_spi[slot], 0x0) << 8); 
+    rtn_val |= pilot_spi_dataexchange(slot_to_spi[slot], 0x0); 
+    pilot_spi_set_cs(slot_to_spi[slot], chip_select_disable);
     
     return rtn_val;
 }
@@ -273,10 +273,10 @@ CmdResult single_ended_adc_read(uint8_t slot, MAX11300_Ports port, uint16_t *dat
         
         while(num_samples--)
         {
-            rpcp_AIO20_set_CNVT(slot, Bit_RESET);
-            rpcp_delay_us(1);
-            rpcp_AIO20_set_CNVT(slot, Bit_SET);
-            rpcp_delay_us(100);
+            pilot_AIO20_set_CNVT(slot, Bit_RESET);
+            pilot_delay_us(1);
+            pilot_AIO20_set_CNVT(slot, Bit_SET);
+            pilot_delay_us(100);
         }
         *data = read_register(slot, (MAX11300RegAddress_t)(adc_data_port_00 + port));
         
@@ -331,7 +331,7 @@ void config_process_1(uint8_t slot, uint16_t *device_control_local)
     *device_control_local |= (device_control_DESIGNVALUE & (device_control_DACREF | device_control_DACCTL));
     write_register(slot, device_control, *device_control_local);
     
-    rpcp_delay_us(200);
+    pilot_delay_us(200);
     
     //Is DACCTL = 2 or 3
     if(((device_control_DESIGNVALUE & device_control_DACCTL) == 2) || ((device_control_DESIGNVALUE & device_control_DACCTL) == 3))
@@ -367,7 +367,7 @@ void config_process_1(uint8_t slot, uint16_t *device_control_local)
         }
     }
     
-    rpcp_delay_us(200 * num_ports_mode_1);
+    pilot_delay_us(200 * num_ports_mode_1);
     
     //Config GPODAT[i] for ports in mode 3
     write_register(slot, gpo_data_15_to_0, gpo_data_15_to_0_DESIGNVALUE);
@@ -382,7 +382,7 @@ void config_process_1(uint8_t slot, uint16_t *device_control_local)
            (port_mode == MODE_10))
         {
             write_register(slot, (MAX11300RegAddress_t)(port_cfg_00 + idx), port_config_design_vals[idx]);
-            rpcp_delay_us(1000);
+            pilot_delay_us(1000);
         }
     }
     
@@ -404,7 +404,7 @@ void config_process_2(uint8_t slot, uint16_t *device_control_local)
         if(port_mode == MODE_9)
         {
             write_register(slot, (MAX11300RegAddress_t)(port_cfg_00 + idx), port_config_design_vals[idx]);
-            rpcp_delay_us(100);
+            pilot_delay_us(100);
         }
     }
     
@@ -414,7 +414,7 @@ void config_process_2(uint8_t slot, uint16_t *device_control_local)
         if((port_mode == MODE_7) || (port_mode == MODE_8))
         {
             write_register(slot, (MAX11300RegAddress_t)(port_cfg_00 + idx), port_config_design_vals[idx]);
-            rpcp_delay_us(100);
+            pilot_delay_us(100);
         }
     }
     

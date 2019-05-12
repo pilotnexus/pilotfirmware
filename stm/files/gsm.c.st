@@ -4,7 +4,7 @@
 
 $model.GSMs:{gsm |
 
-static void rpcp_$gsm.Name$_gpio_init_clock()
+static void pilot_$gsm.Name$_gpio_init_clock()
 {
   /* enable gpio clocks for all pins */
 #ifdef STM32F4XX
@@ -16,7 +16,7 @@ static void rpcp_$gsm.Name$_gpio_init_clock()
 #endif
 \}
 
-static void rpcp_$gsm.Name$_gpio_init()
+static void pilot_$gsm.Name$_gpio_init()
 {
   GPIO_InitTypeDef gpio;
 
@@ -47,15 +47,15 @@ static void rpcp_$gsm.Name$_gpio_init()
   GPIO_Init($gsm.PwrOnGpio$, &gpio);
 \}
 
-static void rpcp_$gsm.Name$_toggle_power()
+static void pilot_$gsm.Name$_toggle_power()
 {
   /* pull the pwr_on pin down for at least 1 second to toggle on/off state */
   GPIO_WriteBit($gsm.PwrOnGpio$, $gsm.PwrOnPin$, Bit_RESET); /* pull low */
-  rpcp_delay_ms(1500);                                       /* wait */
+  pilot_delay_ms(1500);                                       /* wait */
   GPIO_WriteBit($gsm.PwrOnGpio$, $gsm.PwrOnPin$, Bit_SET);   /* pull high */
 \}
 
-void rpcp_$gsm.Name$_set_enable(bool enable)
+void pilot_$gsm.Name$_set_enable(bool enable)
 {
   /* first use the reset pin to enable/disable the module */
   GPIO_WriteBit($gsm.ResetGpio$, $gsm.ResetPin$, enable ? Bit_RESET : Bit_SET);
@@ -64,23 +64,23 @@ void rpcp_$gsm.Name$_set_enable(bool enable)
   if (enable)
   {
     /* toggle power once to power on the device */
-    rpcp_$gsm.Name$_toggle_power();
+    pilot_$gsm.Name$_toggle_power();
   \}
 
 \}
 
-bool rpcp_$gsm.Name$_get_enable()
+bool pilot_$gsm.Name$_get_enable()
 {
   return GPIO_ReadOutputDataBit($gsm.ResetGpio$, $gsm.ResetPin$) == Bit_RESET;
 \}
 
-void rpcp_$gsm.Name$_init()
+void pilot_$gsm.Name$_init()
 {
   /* initialize the gpio clocks */
-  rpcp_$gsm.Name$_gpio_init_clock();
+  pilot_$gsm.Name$_gpio_init_clock();
 
   /* initialize the gpios */
-  rpcp_$gsm.Name$_gpio_init();
+  pilot_$gsm.Name$_gpio_init();
 
   /* initialize the usart */
   rpc_$gsm.Usart.Name$_init();
@@ -89,7 +89,7 @@ void rpcp_$gsm.Name$_init()
   rpc_$gsm.Usart.Name$_set_baudrate(9600);
 
   /* enable the gsm */
-  //rpcp_$gsm.Name$_set_enable(true);
+  //pilot_$gsm.Name$_set_enable(true);
 \}
 
 }; separator = "\n"$

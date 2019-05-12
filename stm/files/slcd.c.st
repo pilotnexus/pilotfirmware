@@ -30,7 +30,7 @@ $model.SLCDs:{slcd|
 /* the display buffer */
 static slcd_display_buffer_t m_$slcd.Name$_display_buffer;
 
-void rpcp_$slcd.Name$_get_resolution(slcd_resolution_t *resolution)
+void pilot_$slcd.Name$_get_resolution(slcd_resolution_t *resolution)
 {
   if (resolution != NULL)
   {
@@ -39,7 +39,7 @@ void rpcp_$slcd.Name$_get_resolution(slcd_resolution_t *resolution)
   \}
 \}
 
-void rpcp_$slcd.Name$_set_resolution(const slcd_resolution_t *resolution)
+void pilot_$slcd.Name$_set_resolution(const slcd_resolution_t *resolution)
 {
   if (resolution != NULL)
   {
@@ -48,7 +48,7 @@ void rpcp_$slcd.Name$_set_resolution(const slcd_resolution_t *resolution)
   \}
 \}
 
-static uint8_t rpcp_$slcd.Name$_get_gateline_adress(int line)
+static uint8_t pilot_$slcd.Name$_get_gateline_adress(int line)
 {
   /* reverse bit order */
   uint8_t b = (uint8_t)line;
@@ -58,40 +58,40 @@ static uint8_t rpcp_$slcd.Name$_get_gateline_adress(int line)
   return b;
 \}
 
-static void rpcp_$slcd.Name$_send_buffer()
+static void pilot_$slcd.Name$_send_buffer()
 {
   int i, j;
 
   /* updating the display using Data Update Mode for Multiple Lines */
 
   /* pull chip select high for the remainder of the communication */
-  if (rpcp_spi_set_cs(spi_id_$slcd.SPI.Id$, chip_select_enable))
+  if (pilot_spi_set_cs(spi_id_$slcd.SPI.Id$, chip_select_enable))
   {
     /* send mode selection */
-    rpcp_spi_send(spi_id_$slcd.SPI.Id$, (uint16_t)slcd_mode_flags_update);
+    pilot_spi_send(spi_id_$slcd.SPI.Id$, (uint16_t)slcd_mode_flags_update);
 
     /* send the content of the display buffer per line */
     for (i = 0; i < m_$slcd.Name$_display_buffer.resolution.height; i++)
     {
       /* send the gate line address */
-      rpcp_spi_send(spi_id_$slcd.SPI.Id$, rpcp_$slcd.Name$_get_gateline_adress(i + 1));
+      pilot_spi_send(spi_id_$slcd.SPI.Id$, pilot_$slcd.Name$_get_gateline_adress(i + 1));
 
       /* send a complete line */
       for (j = 0; j < m_$slcd.Name$_display_buffer.resolution.width / 8; j++)
-        rpcp_spi_send(spi_id_$slcd.SPI.Id$, m_$slcd.Name$_display_buffer.data[j + (i * m_$slcd.Name$_display_buffer.resolution.width / 8)]);
+        pilot_spi_send(spi_id_$slcd.SPI.Id$, m_$slcd.Name$_display_buffer.data[j + (i * m_$slcd.Name$_display_buffer.resolution.width / 8)]);
 
       /* send 8-bits of dummy data */
-      rpcp_spi_send(spi_id_$slcd.SPI.Id$, 0x00);
+      pilot_spi_send(spi_id_$slcd.SPI.Id$, 0x00);
 
     \}
 
     /* send 8-bits of dummy data */
-    rpcp_spi_send(spi_id_$slcd.SPI.Id$, 0x00);
+    pilot_spi_send(spi_id_$slcd.SPI.Id$, 0x00);
 
-    rpcp_delay_us(2);
+    pilot_delay_us(2);
 
     /* pull chip select low again */
-    rpcp_spi_set_cs(spi_id_$slcd.SPI.Id$, chip_select_disable);
+    pilot_spi_set_cs(spi_id_$slcd.SPI.Id$, chip_select_disable);
   \}
 
   /* toggle EXTCOMIN */
@@ -101,13 +101,13 @@ static void rpcp_$slcd.Name$_send_buffer()
 \}
 
 /* prepare updating the display buffer with data */
-void rpcp_$slcd.Name$_update_buffer_start()
+void pilot_$slcd.Name$_update_buffer_start()
 {
   m_$slcd.Name$_display_buffer.index = 0;
 \}
 
 /* update the display buffer with the data */
-void rpcp_$slcd.Name$_update_buffer_data(uint8_t data)
+void pilot_$slcd.Name$_update_buffer_data(uint8_t data)
 {
   /* get the bytes needed to complete a frame at this resolution */
   int resolution_bytes = RESOLUTION_GET_BYTES(m_$slcd.Name$_display_buffer.resolution);
@@ -121,11 +121,11 @@ void rpcp_$slcd.Name$_update_buffer_data(uint8_t data)
 
     /* is this the last byte that is required to render to the resolution? */
     if (m_$slcd.Name$_display_buffer.index == resolution_bytes)
-      rpcp_$slcd.Name$_send_buffer(); /* then render to the display */
+      pilot_$slcd.Name$_send_buffer(); /* then render to the display */
   \}
 \}
 
-static void rpcp_$slcd.Name$_init_gpios()
+static void pilot_$slcd.Name$_init_gpios()
 {
   /* enable gpio clock */
   RCC_$slcd.EXTCOMIN.Periph$PeriphClockCmd(RCC_$slcd.EXTCOMIN.Periph$Periph_$slcd.EXTCOMIN.GPIO$, ENABLE);
@@ -139,10 +139,10 @@ static void rpcp_$slcd.Name$_init_gpios()
 \}
 
 /* initialize the sharp display driver */
-void rpcp_$slcd.Name$_init()
+void pilot_$slcd.Name$_init()
 {
   /* initialize the gpios */
-  rpcp_$slcd.Name$_init_gpios();
+  pilot_$slcd.Name$_init_gpios();
 
   /* set some default values for line length & count */
   m_$slcd.Name$_display_buffer.resolution.width = DISPLAY_DEFAULT_WIDTH;

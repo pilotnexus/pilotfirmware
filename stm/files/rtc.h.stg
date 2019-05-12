@@ -47,9 +47,9 @@ RenderBody(model) ::= <<
 void rtc_init(void);
 
 /* fills the supplied cmd */
-void rtc_get_datetime_cmd(rpcp_cmd_t* cmd);
+void rtc_get_datetime_cmd(pilot_cmd_t* cmd);
 
 /* sets the rtc datetime from the supplied command */
-void rtc_set_datetime_cmd(rpcp_cmd_t* cmd);
+void rtc_set_datetime_cmd(pilot_cmd_t* cmd);
 
 >>

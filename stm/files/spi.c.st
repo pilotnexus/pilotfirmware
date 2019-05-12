@@ -5,7 +5,7 @@ spi_id_t slot_to_spi[$model.Modules.Count$] = { $model.Modules:{module|$if(modul
 static spi_id_t enabled_cs = spi_id_invalid;
 
 /* private function to set the chip select pin */
-static void rpcp_spi_set_cs_pin(spi_id_t spi_id, chip_select_t cs)
+static void pilot_spi_set_cs_pin(spi_id_t spi_id, chip_select_t cs)
 {
   switch (spi_id)
   {
@@ -16,7 +16,7 @@ $model.SPIs:{spi |    case spi_id_$i$:
   }
 }
 
-void rpcp_spi_setup()
+void pilot_spi_setup()
 {
   GPIO_InitTypeDef gpio;
 
@@ -43,11 +43,11 @@ $model.SPIs:{spi|
 
 };separator = "\n"$
   /* disable all chip selects */
-  $model.SPIs:{spi | rpcp_spi_set_cs_pin(spi_id_$i$, chip_select_disable); }; separator = "\n"$
+  $model.SPIs:{spi | pilot_spi_set_cs_pin(spi_id_$i$, chip_select_disable); }; separator = "\n"$
 }
 
 /* configure the spi */
-void rpcp_spi_configure(spi_id_t spi_id)
+void pilot_spi_configure(spi_id_t spi_id)
 {
   SPI_InitTypeDef spi;
 
@@ -68,18 +68,18 @@ $model.SPIs:{spi|case spi_id_$i$:
   }
 }
 
-bool rpcp_spi_set_cs(spi_id_t spi_id, chip_select_t cs)
+bool pilot_spi_set_cs(spi_id_t spi_id, chip_select_t cs)
 {
   if (enabled_cs == spi_id_invalid && cs == chip_select_enable)
   {
-    rpcp_spi_configure(spi_id);
-    rpcp_spi_set_cs_pin(spi_id, chip_select_enable);
+    pilot_spi_configure(spi_id);
+    pilot_spi_set_cs_pin(spi_id, chip_select_enable);
     enabled_cs = spi_id;
     return true;
   }
   else if (enabled_cs == spi_id && cs == chip_select_disable)
   {
-    rpcp_spi_set_cs_pin(spi_id, chip_select_disable);
+    pilot_spi_set_cs_pin(spi_id, chip_select_disable);
     enabled_cs = spi_id_invalid;
     return true;
   }
@@ -89,8 +89,8 @@ bool rpcp_spi_set_cs(spi_id_t spi_id, chip_select_t cs)
   return false;
 }
 
-/* rpcp_spi_data_send, sends data only */
-void rpcp_spi_send(spi_id_t spi_id, uint16_t mosi)
+/* pilot_spi_data_send, sends data only */
+void pilot_spi_send(spi_id_t spi_id, uint16_t mosi)
 {
   switch (spi_id)
   {
@@ -101,8 +101,8 @@ void rpcp_spi_send(spi_id_t spi_id, uint16_t mosi)
   }
 }
 
-/* rpcp_spi_data_exchange */
-uint16_t rpcp_spi_dataexchange(spi_id_t spi_id, uint16_t mosi)
+/* pilot_spi_data_exchange */
+uint16_t pilot_spi_dataexchange(spi_id_t spi_id, uint16_t mosi)
 {
   uint16_t miso;
 

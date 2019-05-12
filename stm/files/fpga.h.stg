@@ -32,11 +32,11 @@ m(name) ::= "m_<name>"
 FPGA(fpga) ::= <<
 
 /* initializes the i8 module */
-void rpcp_<fpga.Name>_init(void);
-int rpcp_<fpga.Name>_set_irq_handled(void);
-void rpcp_<fpga.Name>_send_char(module_port_t port, uint16_t c);
-void rpcp_<fpga.Name>_send(uint8_t *buffer, int length);
-uint8_t rpcp_<fpga.Name>_fpga_gpio_set(int8_t chipSelect, int8_t reset);
+void pilot_<fpga.Name>_init(void);
+int pilot_<fpga.Name>_set_irq_handled(void);
+void pilot_<fpga.Name>_send_char(module_port_t port, uint16_t c);
+void pilot_<fpga.Name>_send(uint8_t *buffer, int length);
+uint8_t pilot_<fpga.Name>_fpga_gpio_set(int8_t chipSelect, int8_t reset);
 >>
 
 RenderBody(model) ::= <<

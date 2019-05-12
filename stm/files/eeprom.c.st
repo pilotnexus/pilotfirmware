@@ -15,7 +15,7 @@
   index 2 -> GPIO_Pin_3
   index 3 -> GPIO_Pin_1
 */
-#define rpcp_eeprom_module_to_pin(index) ((uint16_t)(index == 0) ? GPIO_Pin_2 : (module == 1) ? GPIO_Pin_0 : (module == 2) ? GPIO_Pin_3 : GPIO_Pin_1)
+#define pilot_eeprom_module_to_pin(index) ((uint16_t)(index == 0) ? GPIO_Pin_2 : (module == 1) ? GPIO_Pin_0 : (module == 2) ? GPIO_Pin_3 : GPIO_Pin_1)
 
 /* timings in microseconds for overdrive */
 #define EEPROM_DELAY_A 1.0 /* Write 1-bit (drive bus low) & Read-bit (drive bus low) */
@@ -31,31 +31,31 @@
 
 /* rom commands */
 typedef enum {
-  rpcp_eeprom_rom_cmd_read_rom = 0x33,
-  rpcp_eeprom_rom_cmd_match_rom = 0x55,
-  rpcp_eeprom_rom_cmd_search_rom = 0xF0,
-  rpcp_eeprom_rom_cmd_skip_rom = 0xCC,
-  rpcp_eeprom_rom_cmd_resume_command = 0xA5
-} rpcp_eeprom_rom_cmd_t;
+  pilot_eeprom_rom_cmd_read_rom = 0x33,
+  pilot_eeprom_rom_cmd_match_rom = 0x55,
+  pilot_eeprom_rom_cmd_search_rom = 0xF0,
+  pilot_eeprom_rom_cmd_skip_rom = 0xCC,
+  pilot_eeprom_rom_cmd_resume_command = 0xA5
+} pilot_eeprom_rom_cmd_t;
 
 /* memory commands */
 typedef enum {
-  rpcp_eeprom_mem_cmd_read = 0xF0,
-  rpcp_eeprom_mem_cmd_write = 0x55
-} rpcp_eeprom_mem_cmd_t;
+  pilot_eeprom_mem_cmd_read = 0xF0,
+  pilot_eeprom_mem_cmd_write = 0x55
+} pilot_eeprom_mem_cmd_t;
 
 /* write CS byte */
 typedef enum {
-  rpcp_eeprom_mem_cmd_write_result_success = 0xAA,
-  rpcp_eeprom_mem_cmd_write_result_write_protected = 0x33
-} rpcp_eeprom_mem_cmd_write_result_t;
+  pilot_eeprom_mem_cmd_write_result_success = 0xAA,
+  pilot_eeprom_mem_cmd_write_result_write_protected = 0x33
+} pilot_eeprom_mem_cmd_write_result_t;
 
 /* address of the memory addresses */
 typedef enum {
-  rpcp_eeprom_mem_address_hid  = 0x00,
-  rpcp_eeprom_mem_address_fid  = 0x08,
-  rpcp_eeprom_mem_address_user = 0x10
-} rpcp_eeprom_mem_address_t;
+  pilot_eeprom_mem_address_hid  = 0x00,
+  pilot_eeprom_mem_address_fid  = 0x08,
+  pilot_eeprom_mem_address_user = 0x10
+} pilot_eeprom_mem_address_t;
 
 typedef enum {
   pin_direction_undefined = 0,
@@ -63,22 +63,22 @@ typedef enum {
   pin_direction_input
 } pin_direction_t;
 
-__STATIC_INLINE void rpcp_eeprom_loop(__IO uint32_t nCount)
+__STATIC_INLINE void pilot_eeprom_loop(__IO uint32_t nCount)
 {
   for (; nCount != 0; nCount--);
 }
 
-/* use the rpcp_delay_us() function */
-#define rpcp_eeprom_delay_us(microseconds) rpcp_delay_cycles(USECTOCYCLES(microseconds))
+/* use the pilot_delay_us() function */
+#define pilot_eeprom_delay_us(microseconds) pilot_delay_cycles(USECTOCYCLES(microseconds))
 
 /* works for keil optimization level 0 */
-// #define rpcp_eeprom_delay_us(microseconds) rpcp_eeprom_loop((microseconds -1) * 6)
+// #define pilot_eeprom_delay_us(microseconds) pilot_eeprom_loop((microseconds -1) * 6)
 
 /* works for keil optimization level 3 */
-//#define rpcp_eeprom_delay_us(microseconds) rpcp_eeprom_loop((microseconds -1) * 8)
+//#define pilot_eeprom_delay_us(microseconds) pilot_eeprom_loop((microseconds -1) * 8)
 
 /* configures a pin as an input usuable for a 1-wire communication */
-__STATIC_INLINE void rpcp_eeprom_set_pin_input(uint16_t pin)
+__STATIC_INLINE void pilot_eeprom_set_pin_input(uint16_t pin)
 {
   GPIO_InitTypeDef gpio;
 
@@ -97,7 +97,7 @@ __STATIC_INLINE void rpcp_eeprom_set_pin_input(uint16_t pin)
 }
 
 /* configures a pin as an output usuable for 1-wire communication */
-__STATIC_INLINE void rpcp_eeprom_set_pin_output(uint16_t pin)
+__STATIC_INLINE void pilot_eeprom_set_pin_output(uint16_t pin)
 {
   GPIO_InitTypeDef gpio;
 
@@ -116,15 +116,15 @@ __STATIC_INLINE void rpcp_eeprom_set_pin_output(uint16_t pin)
   GPIO_Init(EEPROM_GPIO, &gpio);
 }
 
-__STATIC_INLINE void rpcp_eeprom_set_pin_direction(module_slot_t module, pin_direction_t direction)
+__STATIC_INLINE void pilot_eeprom_set_pin_direction(module_slot_t module, pin_direction_t direction)
 {
   if (direction == pin_direction_output)
-    rpcp_eeprom_set_pin_output(rpcp_eeprom_module_to_pin(module));
+    pilot_eeprom_set_pin_output(pilot_eeprom_module_to_pin(module));
   else
-    rpcp_eeprom_set_pin_input(rpcp_eeprom_module_to_pin(module));
+    pilot_eeprom_set_pin_input(pilot_eeprom_module_to_pin(module));
 }
 
-#define rpcp_eeprom_set_1w(module, high) GPIO_WriteBit(EEPROM_GPIO, rpcp_eeprom_module_to_pin(module), high ? Bit_SET : Bit_RESET)
+#define pilot_eeprom_set_1w(module, high) GPIO_WriteBit(EEPROM_GPIO, pilot_eeprom_module_to_pin(module), high ? Bit_SET : Bit_RESET)
 
 /* get checksum */
 static uint8_t calculate_checksum(uint8_t * data, uint32_t length) 
@@ -141,130 +141,130 @@ static uint8_t calculate_checksum(uint8_t * data, uint32_t length)
 /* the following 4 functions implement the 4 basic 1-wire operations per bit-banging */
 
 /* writes a 1 over 1-wire */
-static void rpcp_eeprom_write_1_bit(module_slot_t module)
+static void pilot_eeprom_write_1_bit(module_slot_t module)
 {
   /* drive bus low, delay A microseconds */
-  rpcp_eeprom_set_pin_direction(module, pin_direction_output);
-  rpcp_eeprom_set_1w(module, false);
-  rpcp_eeprom_delay_us(EEPROM_DELAY_A);
+  pilot_eeprom_set_pin_direction(module, pin_direction_output);
+  pilot_eeprom_set_1w(module, false);
+  pilot_eeprom_delay_us(EEPROM_DELAY_A);
 
   /* release bus, delay B microseconds */
-  rpcp_eeprom_set_1w(module, true);
-  rpcp_eeprom_set_pin_direction(module, pin_direction_input);
-  rpcp_eeprom_delay_us(EEPROM_DELAY_B);
+  pilot_eeprom_set_1w(module, true);
+  pilot_eeprom_set_pin_direction(module, pin_direction_input);
+  pilot_eeprom_delay_us(EEPROM_DELAY_B);
 }
 
 /* writes a 0 over 1-wire */
-static void rpcp_eeprom_write_0_bit(module_slot_t module)
+static void pilot_eeprom_write_0_bit(module_slot_t module)
 {
   /* drive bus low, delay C microseconds */
-  rpcp_eeprom_set_pin_direction(module, pin_direction_output);
-  rpcp_eeprom_set_1w(module, false);
-  rpcp_eeprom_delay_us(EEPROM_DELAY_C);
+  pilot_eeprom_set_pin_direction(module, pin_direction_output);
+  pilot_eeprom_set_1w(module, false);
+  pilot_eeprom_delay_us(EEPROM_DELAY_C);
 
   /* release bus, delay D microseconds */
-  rpcp_eeprom_set_1w(module, true);
-  rpcp_eeprom_set_pin_direction(module, pin_direction_input);
-  rpcp_eeprom_delay_us(EEPROM_DELAY_D);
+  pilot_eeprom_set_1w(module, true);
+  pilot_eeprom_set_pin_direction(module, pin_direction_input);
+  pilot_eeprom_delay_us(EEPROM_DELAY_D);
 }
 
 /* reads and returns a bit over 1-wire */
-static bool rpcp_eeprom_read_bit(module_slot_t module)
+static bool pilot_eeprom_read_bit(module_slot_t module)
 {
   bool bit;
 
   /* drive bus low, delay A microseconds */
-  rpcp_eeprom_set_pin_direction(module, pin_direction_output);
-  rpcp_eeprom_set_1w(module, false);
-  rpcp_eeprom_delay_us(EEPROM_DELAY_A);
+  pilot_eeprom_set_pin_direction(module, pin_direction_output);
+  pilot_eeprom_set_1w(module, false);
+  pilot_eeprom_delay_us(EEPROM_DELAY_A);
 
   /* release bus, delay E microseconds */
-  rpcp_eeprom_set_1w(module, true);
-  //rpcp_eeprom_set_pin_direction(module, pin_direction_input);
-  //rpcp_eeprom_delay_us(EEPROM_DELAY_E);
+  pilot_eeprom_set_1w(module, true);
+  //pilot_eeprom_set_pin_direction(module, pin_direction_input);
+  //pilot_eeprom_delay_us(EEPROM_DELAY_E);
 
   /* sample bus to read bit from slave */
-  //bit = GPIO_ReadInputDataBit(EEPROM_GPIO, rpcp_eeprom_module_to_pin(module));
-  bit = EEPROM_GPIO->IDR & rpcp_eeprom_module_to_pin(module);
+  //bit = GPIO_ReadInputDataBit(EEPROM_GPIO, pilot_eeprom_module_to_pin(module));
+  bit = EEPROM_GPIO->IDR & pilot_eeprom_module_to_pin(module);
 
   /* delay F microseconds */
-  rpcp_eeprom_delay_us(EEPROM_DELAY_F);
+  pilot_eeprom_delay_us(EEPROM_DELAY_F);
 
   return bit;
 }
 
 /* send reset pulse and returns true if a slave responded with a presence pulse */
-static bool rpcp_eeprom_reset(module_slot_t module)
+static bool pilot_eeprom_reset(module_slot_t module)
 {
   bool slave_present;
 
   /* delay G */
-  rpcp_eeprom_delay_us(EEPROM_DELAY_G);
+  pilot_eeprom_delay_us(EEPROM_DELAY_G);
 
   /* drive the bus low for H microseconds */
-  rpcp_eeprom_set_pin_direction(module, pin_direction_output);
-  rpcp_eeprom_set_1w(module, false);
-  rpcp_eeprom_delay_us(EEPROM_DELAY_H);
+  pilot_eeprom_set_pin_direction(module, pin_direction_output);
+  pilot_eeprom_set_1w(module, false);
+  pilot_eeprom_delay_us(EEPROM_DELAY_H);
 
   /* release bus for I microseconds  */
-  rpcp_eeprom_set_1w(module, true);
-  rpcp_eeprom_set_pin_direction(module, pin_direction_input);
-  rpcp_eeprom_delay_us(EEPROM_DELAY_I);
+  pilot_eeprom_set_1w(module, true);
+  pilot_eeprom_set_pin_direction(module, pin_direction_input);
+  pilot_eeprom_delay_us(EEPROM_DELAY_I);
 
   /* sample bus: 0 = device present, 1 = no device present */
-  slave_present = !GPIO_ReadInputDataBit(EEPROM_GPIO, rpcp_eeprom_module_to_pin(module));
+  slave_present = !GPIO_ReadInputDataBit(EEPROM_GPIO, pilot_eeprom_module_to_pin(module));
 
   /* delay J microseconds  */
-  rpcp_eeprom_delay_us(EEPROM_DELAY_J);
+  pilot_eeprom_delay_us(EEPROM_DELAY_J);
 
   return slave_present;
 }
 
-static void rpcp_eeprom_write_byte(module_slot_t module, uint8_t tx)
+static void pilot_eeprom_write_byte(module_slot_t module, uint8_t tx)
 {
   int i;
 
   /* LSb first (least significant bit first) */
   for (i = 0; i < 8; i++)
     if ((tx >> i) & 0x01)
-      rpcp_eeprom_write_1_bit(module);
+      pilot_eeprom_write_1_bit(module);
     else
-      rpcp_eeprom_write_0_bit(module);
+      pilot_eeprom_write_0_bit(module);
 }
 
-static void rpcp_eeprom_read_byte(module_slot_t module, uint8_t *rx)
+static void pilot_eeprom_read_byte(module_slot_t module, uint8_t *rx)
 {
   int i;
   uint8_t b = 0;
 
   /* LSb first (least significant bit first) */
   for (i = 0; i < 8; i++)
-    b |= rpcp_eeprom_read_bit(module) << i;
+    b |= pilot_eeprom_read_bit(module) << i;
 
   *rx = b;
 }
 
 /* poll the eeprom uid */
-bool rpcp_eeprom_get_module_uid(module_slot_t module, rpcp_eeprom_uid_t *uid)
+bool pilot_eeprom_get_module_uid(module_slot_t module, pilot_eeprom_uid_t *uid)
 {
   int i;
   bool ret;
 
   /* send reset pulse */
-  ret = rpcp_eeprom_reset(module);
+  ret = pilot_eeprom_reset(module);
 
   /* send read rom command */
-  rpcp_eeprom_write_byte(module, (uint8_t)rpcp_eeprom_rom_cmd_read_rom);
+  pilot_eeprom_write_byte(module, (uint8_t)pilot_eeprom_rom_cmd_read_rom);
 
   /* read the rom from the LSB in */
   for (i = 0; i < EEPROM_UID_LENGTH; i++)
-    rpcp_eeprom_read_byte(module, uid->uid + EEPROM_UID_LENGTH - 1 - i);
+    pilot_eeprom_read_byte(module, uid->uid + EEPROM_UID_LENGTH - 1 - i);
 
   return ret;
 }
 
 /* reads the eeprom memory over 1-wire */
-static bool rpcp_eeprom_read_memory(module_slot_t module, uint8_t address, uint8_t *rx, int32_t length, bool checksum)
+static bool pilot_eeprom_read_memory(module_slot_t module, uint8_t address, uint8_t *rx, int32_t length, bool checksum)
 {
   int i;
   const int max_tries = 10;
@@ -273,18 +273,18 @@ static bool rpcp_eeprom_read_memory(module_slot_t module, uint8_t address, uint8
 
   do {
     /* send the 'read' command code */
-    rpcp_eeprom_write_byte(module, (uint8_t)rpcp_eeprom_mem_cmd_read);
+    pilot_eeprom_write_byte(module, (uint8_t)pilot_eeprom_mem_cmd_read);
 
     /* transmit 16-bit starting address */
-    rpcp_eeprom_write_byte(module, address); /* bit7 = 0, bit6...bit0 hold the address */
-    rpcp_eeprom_write_byte(module, 0x00);    /* must be 00 to be valid */
+    pilot_eeprom_write_byte(module, address); /* bit7 = 0, bit6...bit0 hold the address */
+    pilot_eeprom_write_byte(module, 0x00);    /* must be 00 to be valid */
 
     /* read the response */
     for (i = 0; i < length; i++)
-      rpcp_eeprom_read_byte(module, rx + i);
+      pilot_eeprom_read_byte(module, rx + i);
 
     /* reset when done */
-    rpcp_eeprom_reset(module);
+    pilot_eeprom_reset(module);
 
     /* validate checksum if set */
     if (checksum == true)
@@ -306,7 +306,7 @@ static bool rpcp_eeprom_read_memory(module_slot_t module, uint8_t address, uint8
 }
 
 /* writes the eeprom memory over 1-wire - memory is written in 2 bytes */
-static bool rpcp_eeprom_write_memory(module_slot_t module, uint8_t address, uint8_t *data, int32_t length, bool checksum)
+static bool pilot_eeprom_write_memory(module_slot_t module, uint8_t address, uint8_t *data, int32_t length, bool checksum)
 {
   uint8_t i=0;
   uint8_t cs, b0_verification, b1_verification;
@@ -318,86 +318,86 @@ static bool rpcp_eeprom_write_memory(module_slot_t module, uint8_t address, uint
     data[length-1] = calculate_checksum(data, length-1);
        
   /* send the 'write memory' command code */
-  rpcp_eeprom_write_byte(module, (uint8_t)rpcp_eeprom_mem_cmd_write);
+  pilot_eeprom_write_byte(module, (uint8_t)pilot_eeprom_mem_cmd_write);
 
-  rpcp_eeprom_write_byte(module, address); /* send parameter byte */
-  rpcp_eeprom_write_byte(module, 0xFF);    /* send 0xFF byte */
+  pilot_eeprom_write_byte(module, address); /* send parameter byte */
+  pilot_eeprom_write_byte(module, 0xFF);    /* send 0xFF byte */
 
   while (i < length && try_count < max_tries)
   {
     /* write 2 data bytes */
-    rpcp_eeprom_write_byte(module, data[i+0]);
-    rpcp_eeprom_write_byte(module, data[i+1]);
+    pilot_eeprom_write_byte(module, data[i+0]);
+    pilot_eeprom_write_byte(module, data[i+1]);
 
     /* read back the 2 data bytes */
-    rpcp_eeprom_read_byte(module, &b0_verification);
-    rpcp_eeprom_read_byte(module, &b1_verification);
+    pilot_eeprom_read_byte(module, &b0_verification);
+    pilot_eeprom_read_byte(module, &b1_verification);
 
     /* if verifying the bytes works... */
     if (data[i+0] == b0_verification && 
         data[i+1] == b1_verification)
     {
-      rpcp_eeprom_write_byte(module, 0xFF); /* ...send the release byte */
-      rpcp_delay_ms(16);                    /* wait tProg (programming time for a 16-bit segment) */
-      rpcp_eeprom_read_byte(module, &cs);   /* read the CS byte */
-      if (cs == rpcp_eeprom_mem_cmd_write_result_success) /* check if writing worked */
+      pilot_eeprom_write_byte(module, 0xFF); /* ...send the release byte */
+      pilot_delay_ms(16);                    /* wait tProg (programming time for a 16-bit segment) */
+      pilot_eeprom_read_byte(module, &cs);   /* read the CS byte */
+      if (cs == pilot_eeprom_mem_cmd_write_result_success) /* check if writing worked */
         i += 2;
     }
     else
     {
-      rpcp_eeprom_write_byte(module, 0x00); /* not ok */
+      pilot_eeprom_write_byte(module, 0x00); /* not ok */
       try_count++;
     }
   }
 
   /* reset when done */
-  rpcp_eeprom_reset(module);
+  pilot_eeprom_reset(module);
 
   return i >= length;
 }
 
 /* poll the eeprom hid */
-void rpcp_eeprom_get_module_fid(module_slot_t module, rpcp_eeprom_fid_t *fid)
+void pilot_eeprom_get_module_fid(module_slot_t module, pilot_eeprom_fid_t *fid)
 {
-  rpcp_eeprom_read_memory(module, (uint8_t)rpcp_eeprom_mem_address_fid, fid->data, EEPROM_DATA_LENGTH, true);
+  pilot_eeprom_read_memory(module, (uint8_t)pilot_eeprom_mem_address_fid, fid->data, EEPROM_DATA_LENGTH, true);
 }
 
 /* write the eeprom fid */
-bool rpcp_eeprom_set_module_fid(module_slot_t module, rpcp_eeprom_fid_t *fid)
+bool pilot_eeprom_set_module_fid(module_slot_t module, pilot_eeprom_fid_t *fid)
 {
-  return rpcp_eeprom_write_memory(module, (uint8_t)rpcp_eeprom_mem_address_fid, fid->data, EEPROM_DATA_LENGTH, true);
+  return pilot_eeprom_write_memory(module, (uint8_t)pilot_eeprom_mem_address_fid, fid->data, EEPROM_DATA_LENGTH, true);
 }
 
 /* poll the eeprom hid - get uid needs to be called before! */
-void rpcp_eeprom_get_module_hid(module_slot_t module, rpcp_eeprom_hid_t *hid)
+void pilot_eeprom_get_module_hid(module_slot_t module, pilot_eeprom_hid_t *hid)
 {
   /* read the hid from the memory */
-  rpcp_eeprom_read_memory(module, (uint8_t)rpcp_eeprom_mem_address_hid, hid->data, EEPROM_DATA_LENGTH, true);
+  pilot_eeprom_read_memory(module, (uint8_t)pilot_eeprom_mem_address_hid, hid->data, EEPROM_DATA_LENGTH, true);
 }
 
 /* write the eeprom hid */
-bool rpcp_eeprom_set_module_hid(module_slot_t module, rpcp_eeprom_hid_t *hid)
+bool pilot_eeprom_set_module_hid(module_slot_t module, pilot_eeprom_hid_t *hid)
 {
   bool ret = false;
 
-  ret = rpcp_eeprom_write_memory(module, (uint8_t)rpcp_eeprom_mem_address_hid, hid->data, EEPROM_DATA_LENGTH, true);
+  ret = pilot_eeprom_write_memory(module, (uint8_t)pilot_eeprom_mem_address_hid, hid->data, EEPROM_DATA_LENGTH, true);
 
   return ret;
 }
 
 /* poll the user data from the eeprom */
-void rpcp_eeprom_get_module_userdata(module_slot_t module, int data_index, rpcp_eeprom_data_t *data)
+void pilot_eeprom_get_module_userdata(module_slot_t module, int data_index, pilot_eeprom_data_t *data)
 {
-  rpcp_eeprom_read_memory(module, (uint8_t)rpcp_eeprom_mem_address_user + (8*data_index), data->data, EEPROM_DATA_LENGTH, false);
+  pilot_eeprom_read_memory(module, (uint8_t)pilot_eeprom_mem_address_user + (8*data_index), data->data, EEPROM_DATA_LENGTH, false);
 }
 
 /* write the user data to the eeprom */
-bool rpcp_eeprom_set_module_userdata(module_slot_t module, int data_index, rpcp_eeprom_data_t *data)
+bool pilot_eeprom_set_module_userdata(module_slot_t module, int data_index, pilot_eeprom_data_t *data)
 {
-  return rpcp_eeprom_write_memory(module, (uint8_t)rpcp_eeprom_mem_address_user + (8*data_index), data->data, EEPROM_DATA_LENGTH, false);
+  return pilot_eeprom_write_memory(module, (uint8_t)pilot_eeprom_mem_address_user + (8*data_index), data->data, EEPROM_DATA_LENGTH, false);
 }
 
-static void rpcp_eeprom_init_clock()
+static void pilot_eeprom_init_clock()
 {
   /* enable gpio clocks for all pins */
 #ifdef STM32F4XX
@@ -409,7 +409,7 @@ static void rpcp_eeprom_init_clock()
 
 #define I2CX I2C1
 
-static void rpcp_eeprom_board_init_i2c()
+static void pilot_eeprom_board_init_i2c()
 {
   I2C_InitTypeDef  i2c;
   I2C_DeInit(I2CX);
@@ -426,7 +426,7 @@ static void rpcp_eeprom_board_init_i2c()
 }
 
 /* initialize the gpios for I²C1 - PB_6 & PB_7 */
-static void rpcp_eeprom_board_init_gpio()
+static void pilot_eeprom_board_init_gpio()
 {
   GPIO_InitTypeDef gpio;
   gpio.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7;
@@ -436,7 +436,7 @@ static void rpcp_eeprom_board_init_gpio()
 }
 
 /* initialize the clocks */
-static void rpcp_eeprom_board_init_clocks()
+static void pilot_eeprom_board_init_clocks()
 {
   RCC_AHBPeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
   RCC_AHBPeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);
@@ -444,15 +444,15 @@ static void rpcp_eeprom_board_init_clocks()
   RCC_AHBPeriphClockCmd(RCC_APB1Periph_I2C1, ENABLE);
 }
 
-static void rpcp_eeprom_board_init()
+static void pilot_eeprom_board_init()
 {
-  rpcp_eeprom_board_init_clocks();
-  rpcp_eeprom_board_init_gpio();
-  rpcp_eeprom_board_init_i2c();
+  pilot_eeprom_board_init_clocks();
+  pilot_eeprom_board_init_gpio();
+  pilot_eeprom_board_init_i2c();
 }
 
 /* poll the base eeprom uid over the eeprom */
-bool rpcp_eeprom_get_board_uid(uint32_t *uid)
+bool pilot_eeprom_get_board_uid(uint32_t *uid)
 {
   ///* while the bus is busy */
   //while (I2C_GetFlagStatus(I2CX, I2C_FLAG_BUSY))
@@ -473,9 +473,9 @@ bool rpcp_eeprom_get_board_uid(uint32_t *uid)
 }
 
 /* initialize the eeprom driver */
-void rpcp_eeprom_init()
+void pilot_eeprom_init()
 {
-  rpcp_eeprom_init_clock();
+  pilot_eeprom_init_clock();
 
-  //rpcp_eeprom_board_init();
+  //pilot_eeprom_board_init();
 }

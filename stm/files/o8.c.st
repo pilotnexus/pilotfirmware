@@ -4,7 +4,7 @@
 
 $model.o8s:{o8|
 
-static void rpcp_$o8.Name$_configure_clocks()
+static void pilot_$o8.Name$_configure_clocks()
 {
   /* enable gpio clocks for all pins */
 
@@ -15,7 +15,7 @@ static void rpcp_$o8.Name$_configure_clocks()
 #endif
 \}
 
-static void rpcp_$o8.Name$_configure_gpios()
+static void pilot_$o8.Name$_configure_gpios()
 {
   GPIO_InitTypeDef outputs;
 
@@ -36,14 +36,14 @@ $o8.Outputs:{p|
 \}
 
 /* initializes the o8 module */
-void rpcp_$o8.Name$_init()
+void pilot_$o8.Name$_init()
 {
-  rpcp_$o8.Name$_configure_clocks();
-  rpcp_$o8.Name$_configure_gpios();
+  pilot_$o8.Name$_configure_clocks();
+  pilot_$o8.Name$_configure_gpios();
 \}
 
 /* send the state of the output to the rpi */
-uint8_t rpcp_$o8.Name$_get_value(uint8_t output)
+uint8_t pilot_$o8.Name$_get_value(uint8_t output)
 {
   uint8_t state = 0;
   switch (output)
@@ -53,7 +53,7 @@ uint8_t rpcp_$o8.Name$_get_value(uint8_t output)
   return state;
 \}
 
-void rpcp_$o8.Name$_set_value(uint8_t output, bool value)
+void pilot_$o8.Name$_set_value(uint8_t output, bool value)
 {
   switch (output)
   {

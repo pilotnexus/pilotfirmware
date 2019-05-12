@@ -23,22 +23,22 @@ void rpc_$ia8.Name$_get_value(int input_index, uint16_t* value)
   uint8_t b1, b2;
 
   /* pull chip select low for the remainder of the communication */
-  if (rpcp_spi_set_cs(spi_id_$ia8.SPI.Id$, chip_select_enable))
+  if (pilot_spi_set_cs(spi_id_$ia8.SPI.Id$, chip_select_enable))
   {
     /* first send the start bit & single bit, we don't care about the return value */
-    rpcp_spi_dataexchange(spi_id_$ia8.SPI.Id$, 0x06 | (input_index >> 2));
+    pilot_spi_dataexchange(spi_id_$ia8.SPI.Id$, 0x06 | (input_index >> 2));
 
     /* then send the requested channel, the returned byte holds the first part of the value */
-    b1 = rpcp_spi_dataexchange(spi_id_$ia8.SPI.Id$, input_index << 6);
+    b1 = pilot_spi_dataexchange(spi_id_$ia8.SPI.Id$, input_index << 6);
 
     /* the returned byte holds the second part of the value */
-    b2 = rpcp_spi_dataexchange(spi_id_$ia8.SPI.Id$, 0);
+    b2 = pilot_spi_dataexchange(spi_id_$ia8.SPI.Id$, 0);
 
     /* set the requested value */
     *value = ((b1 << 8) | b2) & 0xFFF;
 
     /* pull chip select high again */
-    rpcp_spi_set_cs(spi_id_$ia8.SPI.Id$, chip_select_disable);
+    pilot_spi_set_cs(spi_id_$ia8.SPI.Id$, chip_select_disable);
   \}
 \}
 
@@ -49,18 +49,18 @@ void rpc_$ia8.Name$_get_values(int input_index, int count, uint16_t* value, int 
   uint16_t val;
 
   /* pull chip select low for the remainder of the communication */
-  if (rpcp_spi_set_cs(spi_id_$ia8.SPI.Id$, chip_select_enable))
+  if (pilot_spi_set_cs(spi_id_$ia8.SPI.Id$, chip_select_enable))
   {
     for(i=input_index;i<(input_index+count);i++)
     {
       /* first send the start bit & single bit, we don't care about the return value */
-      rpcp_spi_dataexchange(spi_id_$ia8.SPI.Id$, 0x06 | (i >> 2));
+      pilot_spi_dataexchange(spi_id_$ia8.SPI.Id$, 0x06 | (i >> 2));
 
       /* then send the requested channel, the returned byte holds the first part of the value */
-      val = rpcp_spi_dataexchange(spi_id_$ia8.SPI.Id$, i << 6) << 8;
+      val = pilot_spi_dataexchange(spi_id_$ia8.SPI.Id$, i << 6) << 8;
 
       /* the returned byte holds the second part of the value */
-      val |= rpcp_spi_dataexchange(spi_id_$ia8.SPI.Id$, 0);
+      val |= pilot_spi_dataexchange(spi_id_$ia8.SPI.Id$, 0);
 
       if ((val & 0x1000) == 0) //else error
       {
@@ -77,7 +77,7 @@ void rpc_$ia8.Name$_get_values(int input_index, int count, uint16_t* value, int 
     \}
 
     /* pull chip select high again */
-    rpcp_spi_set_cs(spi_id_$ia8.SPI.Id$, chip_select_disable);
+    pilot_spi_set_cs(spi_id_$ia8.SPI.Id$, chip_select_disable);
   \}
 \}
 $endif$

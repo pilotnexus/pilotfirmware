@@ -71,31 +71,31 @@ static void rtc_configure()
 }
 
 /* fills the supplied cmd */
-void rtc_get_datetime_cmd(rpcp_cmd_t* cmd)
+void rtc_get_datetime_cmd(pilot_cmd_t* cmd)
 {
 #ifdef STM32F4XX
   RTC_DateTypeDef date;
   RTC_TimeTypeDef time;
 
   /* clear the struct */
-  memset(cmd, 0, sizeof(rpcp_cmd_t));
+  memset(cmd, 0, sizeof(pilot_cmd_t));
 
   rtc_get_time_bin(&time); /* retrieve the time from the rtc */
   rtc_get_date_bin(&date); /* retrieve the date from the rtc */
 
   cmd->target = target_base;
-  cmd->type   = rpcp_cmd_type_rtc_get;
+  cmd->type   = pilot_cmd_type_rtc_get;
 
   /* set the time components */
-  cmd->data[rpcp_rtc_index_hours]   = time.RTC_Hours;
-  cmd->data[rpcp_rtc_index_minutes] = time.RTC_Minutes;
-  cmd->data[rpcp_rtc_index_seconds] = time.RTC_Seconds;
+  cmd->data[pilot_rtc_index_hours]   = time.RTC_Hours;
+  cmd->data[pilot_rtc_index_minutes] = time.RTC_Minutes;
+  cmd->data[pilot_rtc_index_seconds] = time.RTC_Seconds;
 
   /* set the date components */
-  cmd->data[rpcp_rtc_index_dayofmonth] = date.RTC_Date;
-  cmd->data[rpcp_rtc_index_weekday]    = date.RTC_WeekDay;
-  cmd->data[rpcp_rtc_index_month]      = date.RTC_Month;
-  cmd->data[rpcp_rtc_index_year]       = date.RTC_Year;
+  cmd->data[pilot_rtc_index_dayofmonth] = date.RTC_Date;
+  cmd->data[pilot_rtc_index_weekday]    = date.RTC_WeekDay;
+  cmd->data[pilot_rtc_index_month]      = date.RTC_Month;
+  cmd->data[pilot_rtc_index_year]       = date.RTC_Year;
 #else /* STM32F10X_HD */
 
   time_t rawtime;
@@ -116,16 +116,16 @@ void rtc_get_datetime_cmd(rpcp_cmd_t* cmd)
 #endif
 
   /* fill the cmd struct */
-  memset(cmd, 0, sizeof(rpcp_cmd_t)); /* clear the struct */
+  memset(cmd, 0, sizeof(pilot_cmd_t)); /* clear the struct */
   cmd->target = target_base;
-  cmd->type   = rpcp_cmd_type_rtc_get;
-  cmd->data[rpcp_rtc_index_hours]      = ptm->tm_hour;
-  cmd->data[rpcp_rtc_index_minutes]    = ptm->tm_min;
-  cmd->data[rpcp_rtc_index_seconds]    = ptm->tm_sec;
-  cmd->data[rpcp_rtc_index_dayofmonth] = ptm->tm_mday;
-  cmd->data[rpcp_rtc_index_weekday]    = ptm->tm_wday;
-  cmd->data[rpcp_rtc_index_month]      = ptm->tm_mon;
-  cmd->data[rpcp_rtc_index_year]       = ptm->tm_year;
+  cmd->type   = pilot_cmd_type_rtc_get;
+  cmd->data[pilot_rtc_index_hours]      = ptm->tm_hour;
+  cmd->data[pilot_rtc_index_minutes]    = ptm->tm_min;
+  cmd->data[pilot_rtc_index_seconds]    = ptm->tm_sec;
+  cmd->data[pilot_rtc_index_dayofmonth] = ptm->tm_mday;
+  cmd->data[pilot_rtc_index_weekday]    = ptm->tm_wday;
+  cmd->data[pilot_rtc_index_month]      = ptm->tm_mon;
+  cmd->data[pilot_rtc_index_year]       = ptm->tm_year;
 #endif
   cmd->length = MSG_LEN(8);
 }
@@ -198,23 +198,23 @@ static time_t mktime_fix(struct tm *tim_p)
 #endif
 
 /* sets the rtc datetime from the supplied command */
-void rtc_set_datetime_cmd(rpcp_cmd_t* cmd)
+void rtc_set_datetime_cmd(pilot_cmd_t* cmd)
 {
 #ifdef STM32F4XX
   uint8_t hours, minutes, seconds;
   uint8_t year, month, dayOfMonth, weekday;
 
   /* set the time */
-  hours   = cmd->data[rpcp_rtc_index_hours];
-  minutes = cmd->data[rpcp_rtc_index_minutes];
-  seconds = cmd->data[rpcp_rtc_index_seconds];
+  hours   = cmd->data[pilot_rtc_index_hours];
+  minutes = cmd->data[pilot_rtc_index_minutes];
+  seconds = cmd->data[pilot_rtc_index_seconds];
   rtc_set_time_bin(hours, minutes, seconds);
 
   /* set the date */
-  year       = cmd->data[rpcp_rtc_index_year];
-  month      = cmd->data[rpcp_rtc_index_month];
-  dayOfMonth = cmd->data[rpcp_rtc_index_dayofmonth];
-  weekday    = cmd->data[rpcp_rtc_index_weekday];
+  year       = cmd->data[pilot_rtc_index_year];
+  month      = cmd->data[pilot_rtc_index_month];
+  dayOfMonth = cmd->data[pilot_rtc_index_dayofmonth];
+  weekday    = cmd->data[pilot_rtc_index_weekday];
   rtc_set_date_bin(year, month, dayOfMonth, weekday);
 #else /* STM32F10X_HD */
   time_t rawtime;
@@ -224,13 +224,13 @@ void rtc_set_datetime_cmd(rpcp_cmd_t* cmd)
   memset(&timeinfo, 0, sizeof(struct tm));
 
   /* fill the struct tm */
-  timeinfo.tm_hour = cmd->data[rpcp_rtc_index_hours];
-  timeinfo.tm_min  = cmd->data[rpcp_rtc_index_minutes];
-  timeinfo.tm_sec  = cmd->data[rpcp_rtc_index_seconds];
-  timeinfo.tm_mday = cmd->data[rpcp_rtc_index_dayofmonth];
-  timeinfo.tm_wday = cmd->data[rpcp_rtc_index_weekday];
-  timeinfo.tm_mon  = cmd->data[rpcp_rtc_index_month];
-  timeinfo.tm_year = cmd->data[rpcp_rtc_index_year];
+  timeinfo.tm_hour = cmd->data[pilot_rtc_index_hours];
+  timeinfo.tm_min  = cmd->data[pilot_rtc_index_minutes];
+  timeinfo.tm_sec  = cmd->data[pilot_rtc_index_seconds];
+  timeinfo.tm_mday = cmd->data[pilot_rtc_index_dayofmonth];
+  timeinfo.tm_wday = cmd->data[pilot_rtc_index_weekday];
+  timeinfo.tm_mon  = cmd->data[pilot_rtc_index_month];
+  timeinfo.tm_year = cmd->data[pilot_rtc_index_year];
 
   /* use standard c library function to convert struct tm to seconds since 1/1/1970 */
   rawtime = mktime_fix(&timeinfo);
@@ -313,11 +313,11 @@ static void rtc_configure_init()
 /* initialize the rtc */
 void rtc_init()
 {
-  rpcp_pilot_usart_send_string("initializing rtc...");
+  pilot_usart_send_string("initializing rtc...");
   rtc_configure_init();
-  rpcp_pilot_usart_send_string("DONE\r\n");
+  pilot_usart_send_string("DONE\r\n");
 
-  rpcp_pilot_usart_send_string("configuring rtc...");
+  pilot_usart_send_string("configuring rtc...");
   rtc_configure();
-  rpcp_pilot_usart_send_string("DONE\r\n");
+  pilot_usart_send_string("DONE\r\n");
 }

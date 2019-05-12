@@ -29,10 +29,10 @@ Render(model) ::= <<
 /* declares the counter8 functions */
 counter8(counter8) ::= <<
 
-void rpcp_<counter8.Name>_init(void);
-void rpcp_<counter8.Name>_get_counter_cmd(rpcp_cmd_t* cmd, int counter_index);
-void rpcp_<counter8.Name>_increment_counter(int counter_index);
-void rpcp_<counter8.Name>_set_counter(int counter_index, uint64_t value);
+void pilot_<counter8.Name>_init(void);
+void pilot_<counter8.Name>_get_counter_cmd(pilot_cmd_t* cmd, int counter_index);
+void pilot_<counter8.Name>_increment_counter(int counter_index);
+void pilot_<counter8.Name>_set_counter(int counter_index, uint64_t value);
 
 >>
 
@@ -51,6 +51,6 @@ RenderBody(model) ::= <<
 <! functions foreach counter8 module !>
 <model.counter8s:{counter8|<counter8(counter8)>};separator="\n">
 
-void rpcp_counter8_set_counter(rpcp_cmd_t* cmd);
+void pilot_counter8_set_counter(pilot_cmd_t* cmd);
 
 >>

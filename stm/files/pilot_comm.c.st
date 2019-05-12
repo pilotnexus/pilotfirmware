@@ -41,12 +41,12 @@ static void rpc_pilot_comm_spi_dma_init();
 static void rpc_pilot_comm_gpio_init(void);
 static void rpc_pilot_comm_gpio_clear(void);
 
-static void rpc_pilot_comm_spi_handle_cmd_complete(rpcp_cmd_t* cmd);
-static void rpcp_pilot_comm_handle_plc_readdata(char data);
-static void rpcp_pilot_comm_handle_plc_writedata(char data);
+static void rpc_pilot_comm_spi_handle_cmd_complete(pilot_cmd_t* cmd);
+static void pilot_comm_handle_plc_readdata(char data);
+static void pilot_comm_handle_plc_writedata(char data);
 
 /* main initialization function */
-void rpcp_pilot_comm_init()
+void pilot_comm_init()
 {
   NVIC_PriorityGroupConfig(NVIC_PriorityGroup_0);
 
@@ -74,7 +74,7 @@ void rpcp_pilot_comm_init()
   tmpreg = READ_BIT(RCC->AHBENR, RCC_AHBENR_CRCEN);
 }
 
-void rpcp_pilot_comm_increment_cmd_timeout()
+void pilot_comm_increment_cmd_timeout()
 {
   _internals.current_cmd_timeout_counter++;
 }
@@ -89,12 +89,12 @@ void pilot_enqueue_spi_tx(uint16_t data)
     _internals.send2rpiqueue_overflow_count++;
 }
 
-void rpcp_pilot_comm_enqueue_usart(uint16_t data)
+void pilot_comm_enqueue_usart(uint16_t data)
 {
   pilot_enqueue_spi_tx(data);
 }
 
-void rpcp_pilot_comm_send(target_t target, char* buffer, int length)
+void pilot_comm_send(target_t target, char* buffer, int length)
 {
   int i;
 
@@ -106,7 +106,7 @@ void rpcp_pilot_comm_send(target_t target, char* buffer, int length)
 }
 
 /* send the supplied command to the rpi */
-void rpcp_pilot_comm_send_cmd(rpcp_cmd_t *cmd)
+void pilot_comm_send_cmd(pilot_cmd_t *cmd)
 {
   int i;
   uint8_t length_parity;
@@ -383,15 +383,15 @@ static void rpc_pilot_comm_gpio_clear()
 
 static void rpc_pilot_comm_send_bufferstate_cmd(stm_bufferstate_t bufferstate)
 {
-  rpcp_cmd_t cmd;
+  pilot_cmd_t cmd;
   
   /* fill the bufferstate command */
-  memset(&cmd, 0, sizeof(rpcp_cmd_t));
-  cmd.type = rpcp_cmd_type_bufferstate;
-  cmd.data[(int)rpcp_bufferstate_index_value] = bufferstate;
+  memset(&cmd, 0, sizeof(pilot_cmd_t));
+  cmd.type = pilot_cmd_type_bufferstate;
+  cmd.data[(int)pilot_bufferstate_index_value] = bufferstate;
   cmd.length = MSG_LEN(4); //minimum length
   /* send the bufferstate cmd */
-  rpcp_pilot_comm_send_cmd(&cmd);
+  pilot_comm_send_cmd(&cmd);
 }
 
 static void rpc_send_data_to_module(module_slot_t slot, module_port_t port, uint8_t data, uint16_t spidata)
@@ -416,12 +416,12 @@ $model.Modules:{module|
 
 $model.SLCDs:{slcd|
   if (slot == $slcd.Slot$)
-    rpcp_$slcd.Name$_update_buffer_data(data);
+    pilot_$slcd.Name$_update_buffer_data(data);
 };separator="\n"$
 
 $model.FPGAs:{fpga|
   if (slot == $fpga.Slot$)
-    rpcp_$fpga.Name$_send_char(port, spidata);
+    pilot_$fpga.Name$_send_char(port, spidata);
 };separator="\n"$
 
 }
@@ -436,7 +436,7 @@ static void pilot_spi0_handle_received_cmd_byte(target_t target, uint8_t data)
   if (target == target_base)
   {
     /* ...reset the cmd */
-    _internals.current_cmd.index = rpcp_current_cmd_index_target;
+    _internals.current_cmd.index = pilot_current_cmd_index_target;
     _internals.current_cmd.cmd_completion = 0x0;
   }
   
@@ -445,7 +445,7 @@ static void pilot_spi0_handle_received_cmd_byte(target_t target, uint8_t data)
     switch ((uint8_t)target)
     {
     case (uint8_t)target_base:_internals.current_cmd.cmd.target = (target_t)data; _internals.current_cmd.cmd_completion |= 0x1; break;
-    case (uint8_t)target_base_type: _internals.current_cmd.cmd.type = (rpcp_cmd_type_t)data; _internals.current_cmd.cmd_completion |= 0x2; break;
+    case (uint8_t)target_base_type: _internals.current_cmd.cmd.type = (pilot_cmd_type_t)data; _internals.current_cmd.cmd_completion |= 0x2; break;
     case (uint8_t)target_base_length: 
       //calculate parity
       length_parity = data; 
@@ -492,8 +492,8 @@ static void pilot_spi0_handle_received_cmd_byte(target_t target, uint8_t data)
 
   /* is the received command completed? */
   if ((_internals.current_cmd.cmd_completion == 0xFF) && 
-    (_internals.current_cmd.index >= rpcp_cmd_t_size_without_data) && 
-    (_internals.current_cmd.index >= (_internals.current_cmd.length + rpcp_cmd_t_size_without_data)))
+    (_internals.current_cmd.index >= pilot_cmd_t_size_without_data) && 
+    (_internals.current_cmd.index >= (_internals.current_cmd.length + pilot_cmd_t_size_without_data)))
   {
     /* hardware CRC */
     CRC_ResetDR();
@@ -505,7 +505,7 @@ static void pilot_spi0_handle_received_cmd_byte(target_t target, uint8_t data)
     crc_check = CRC->DR;
 
     /* reset the current cmd index */
-    _internals.current_cmd.index = rpcp_current_cmd_index_target;
+    _internals.current_cmd.index = pilot_current_cmd_index_target;
 
     if (crc_check == _internals.current_cmd.cmd.crc) 
     {
@@ -520,7 +520,7 @@ static void pilot_spi0_handle_received_cmd_byte(target_t target, uint8_t data)
   }
 }
 
-void rpcp_handle_received_data()
+void pilot_handle_received_data()
 {
   uint16_t spidata;
   target_t target; uint8_t data;
@@ -562,11 +562,11 @@ void rpcp_handle_received_data()
       }
       else if (target == target_plc_read)
       { /* forward the data to the plc */
-        rpcp_pilot_comm_handle_plc_readdata(data);
+        pilot_comm_handle_plc_readdata(data);
       }
       else if (target == target_plc_write)
       {
-        rpcp_pilot_comm_handle_plc_writedata(data);
+        pilot_comm_handle_plc_writedata(data);
       }
       else /* forward the data to the specified module */
       {
@@ -580,26 +580,26 @@ void rpcp_handle_received_data()
         }
         else
         {
-          rpcp_pilot_usart_send_formatted_string("Unknown slot %i, port %i\r\n", slot, port);	   
+          pilot_usart_send_formatted_string("Unknown slot %i, port %i\r\n", slot, port);	   
         }
       }
     }
   }
 }
 
-static int rpc_stm_proto_baudrate_to_int(rpcp_cmd_baudrate_t value)
+static int rpc_stm_proto_baudrate_to_int(pilot_cmd_baudrate_t value)
 {
   int baudrate;
 
   switch (value)
   {
-    case rpcp_cmd_baudrate_9600: baudrate = 9600; break;
-    case rpcp_cmd_baudrate_19200: baudrate = 19200; break;
-    case rpcp_cmd_baudrate_38400: baudrate = 38400; break;
-    case rpcp_cmd_baudrate_57600: baudrate = 57600; break;
-    case rpcp_cmd_baudrate_115200: baudrate = 115200; break;
-    case rpcp_cmd_baudrate_230400: baudrate = 230400; break;
-    case rpcp_cmd_baudrate_250000: baudrate = 250000; break;
+    case pilot_cmd_baudrate_9600: baudrate = 9600; break;
+    case pilot_cmd_baudrate_19200: baudrate = 19200; break;
+    case pilot_cmd_baudrate_38400: baudrate = 38400; break;
+    case pilot_cmd_baudrate_57600: baudrate = 57600; break;
+    case pilot_cmd_baudrate_115200: baudrate = 115200; break;
+    case pilot_cmd_baudrate_230400: baudrate = 230400; break;
+    case pilot_cmd_baudrate_250000: baudrate = 250000; break;
     default: baudrate = 9600; break;
   }
 
@@ -607,40 +607,40 @@ static int rpc_stm_proto_baudrate_to_int(rpcp_cmd_baudrate_t value)
 }
 
 
-static uint16_t rpc_pilot_comm_spi_get_mc_stopbits(rpcp_cmd_stopbits_t rpcp_stopbits)
+static uint16_t rpc_pilot_comm_spi_get_mc_stopbits(pilot_cmd_stopbits_t pilot_stopbits)
 {
   uint16_t mc_stopbits;
-  switch (rpcp_stopbits)
+  switch (pilot_stopbits)
   {
-    case rpcp_cmd_stopbits_2: mc_stopbits = USART_StopBits_2; break;
+    case pilot_cmd_stopbits_2: mc_stopbits = USART_StopBits_2; break;
     default:
-    case rpcp_cmd_stopbits_1: mc_stopbits = USART_StopBits_1; break;
+    case pilot_cmd_stopbits_1: mc_stopbits = USART_StopBits_1; break;
   }
 
   RETURN mc_stopbits;
 }
 
-static uint16_t rpc_pilot_comm_spi_get_mc_parity(rpcp_cmd_parity_t rpcp_parity)
+static uint16_t rpc_pilot_comm_spi_get_mc_parity(pilot_cmd_parity_t pilot_parity)
 {
   uint16_t mc_parity;
-  switch (rpcp_parity)
+  switch (pilot_parity)
   {
-    case rpcp_cmd_parity_even: mc_parity = USART_Parity_Even; break;
-    case rpcp_cmd_parity_odd: mc_parity  = USART_Parity_Odd; break;
+    case pilot_cmd_parity_even: mc_parity = USART_Parity_Even; break;
+    case pilot_cmd_parity_odd: mc_parity  = USART_Parity_Odd; break;
     default:
-    case rpcp_cmd_parity_none: mc_parity = USART_Parity_No; break;
+    case pilot_cmd_parity_none: mc_parity = USART_Parity_No; break;
   }
   RETURN mc_parity;
 }
 
-static uint16_t rpc_pilot_comm_spi_get_mc_wordlength(rpcp_cmd_wordlength_t rpcp_wordlength)
+static uint16_t rpc_pilot_comm_spi_get_mc_wordlength(pilot_cmd_wordlength_t pilot_wordlength)
 {
   uint16_t mc_databits;
-  switch (rpcp_wordlength)
+  switch (pilot_wordlength)
   {
     default:
-    case rpcp_cmd_wordlength_8: mc_databits = USART_WordLength_8b; break;
-    case rpcp_cmd_wordlength_9: mc_databits = USART_WordLength_9b; break;
+    case pilot_cmd_wordlength_8: mc_databits = USART_WordLength_8b; break;
+    case pilot_cmd_wordlength_9: mc_databits = USART_WordLength_9b; break;
   }
   RETURN mc_databits;
 }
@@ -713,7 +713,7 @@ $model.Modules:{module|
 };separator="\n"$
 }
 
-static void rpc_pilot_comm_get_input_state_cmd(module_slot_t slot, uint8_t input, rpcp_cmd_t *cmd)
+static void rpc_pilot_comm_get_input_state_cmd(module_slot_t slot, uint8_t input, pilot_cmd_t *cmd)
 {
   uint32_t value;
   $if(model.IA8s)$
@@ -748,50 +748,50 @@ static void rpc_pilot_comm_get_input_state_cmd(module_slot_t slot, uint8_t input
   }
 
   /* fill the rpcp cmd */
-  memset(cmd, 0, sizeof(rpcp_cmd_t));
+  memset(cmd, 0, sizeof(pilot_cmd_t));
   cmd->target = target_t_from_module_slot_and_port(slot, 0);
-  cmd->type = rpcp_cmd_type_input_get_input;
-  cmd->data[(int)rpcp_input_index_target] = input;
-  cmd->data[(int)rpcp_input_index_value + 0] = (value >> 3*8) & 0xFF;
-  cmd->data[(int)rpcp_input_index_value + 1] = (value >> 2*8) & 0xFF;
-  cmd->data[(int)rpcp_input_index_value + 2] = (value >> 1*8) & 0xFF;
-  cmd->data[(int)rpcp_input_index_value + 3] = (value >> 0*8) & 0xFF;
+  cmd->type = pilot_cmd_type_input_get_input;
+  cmd->data[(int)pilot_input_index_target] = input;
+  cmd->data[(int)pilot_input_index_value + 0] = (value >> 3*8) & 0xFF;
+  cmd->data[(int)pilot_input_index_value + 1] = (value >> 2*8) & 0xFF;
+  cmd->data[(int)pilot_input_index_value + 2] = (value >> 1*8) & 0xFF;
+  cmd->data[(int)pilot_input_index_value + 3] = (value >> 0*8) & 0xFF;
   cmd->length = MSG_LEN(8);
 }
 
 static void rpc_pilot_comm_send_input_state(module_slot_t slot, uint8_t input)
 {
-  rpcp_cmd_t cmd;
+  pilot_cmd_t cmd;
 
   /* get a command that contains the input state */
   rpc_pilot_comm_get_input_state_cmd(slot, input, &cmd);
 
   /* send the input state cmd */
-  rpcp_pilot_comm_send_cmd(&cmd);
+  pilot_comm_send_cmd(&cmd);
 }
 
 /* sends the counter values to the rpi */
-static void rpc_pilot_comm_get_counter_values(module_slot_t slot, rpcp_counter_target_t counter_target)
+static void rpc_pilot_comm_get_counter_values(module_slot_t slot, pilot_counter_target_t counter_target)
 {
 $if(model.Counter8s)$
-  rpcp_cmd_t cmd; int counter_index;
+  pilot_cmd_t cmd; int counter_index;
 $endif$
 
 $model.Counter8s:{counter8|
   if (slot == $counter8.Slot$)
   {
     /* if we're getting all counters */
-    if (counter_target == rpcp_counter_target_all) {
+    if (counter_target == pilot_counter_target_all) {
       for (counter_index = 0; counter_index < COUNTERS_COUNT; counter_index++) {
-        rpcp_$counter8.Name$_get_counter_cmd(&cmd, counter_index); /* update the command for module <counter8.Slot> and the counter */
-        rpcp_pilot_comm_send_cmd(&cmd);                      /* send the command  */
+        pilot_$counter8.Name$_get_counter_cmd(&cmd, counter_index); /* update the command for module <counter8.Slot> and the counter */
+        pilot_comm_send_cmd(&cmd);                      /* send the command  */
       \}
     \}
 
     /* if we're getting a single counter, do a sanity check */
     else if ((int)counter_target >= 0 && counter_target < COUNTERS_COUNT) {
-      rpcp_$counter8.Name$_get_counter_cmd(&cmd, counter_target);
-      rpcp_pilot_comm_send_cmd(&cmd);
+      pilot_$counter8.Name$_get_counter_cmd(&cmd, counter_target);
+      pilot_comm_send_cmd(&cmd);
     \}
   \}
 };separator="\n"$
@@ -800,25 +800,25 @@ $model.Counter8s:{counter8|
 
 static void rpc_pilot_comm_send_rtc()
 {
-  rpcp_cmd_t cmd;
+  pilot_cmd_t cmd;
 
   /* get a command that contains the current datetime */
   rtc_get_datetime_cmd(&cmd);
 
   /* send the rtc cmd */
-  rpcp_pilot_comm_send_cmd(&cmd);
+  pilot_comm_send_cmd(&cmd);
 }
 
-void rpcp_pilot_comm_send_input_changed(module_slot_t slot)
+void pilot_comm_send_input_changed(module_slot_t slot)
 {
-  rpcp_cmd_t cmd;
+  pilot_cmd_t cmd;
 
   /* generate the input changed cmd */
-  memset(&cmd, 0, sizeof(rpcp_cmd_t));
+  memset(&cmd, 0, sizeof(pilot_cmd_t));
   cmd.target = target_t_from_module_slot_and_port(slot, 0);
-  cmd.type = rpcp_cmd_type_input_changed;
+  cmd.type = pilot_cmd_type_input_changed;
   cmd.length = 0; //TODO - send the changed input as well
-  rpcp_pilot_comm_send_cmd(&cmd);
+  pilot_comm_send_cmd(&cmd);
 }
 
 //START LORA
@@ -836,7 +836,7 @@ static void rpc_rpi_lora_get_enable(module_slot_t slot)
 {
 $if(model.LORAs)$
   int enabled;
-  rpcp_cmd_t cmd;
+  pilot_cmd_t cmd;
 
   /* get the state */
   switch (slot)
@@ -848,12 +848,12 @@ $model.LORAs:{lora|
   }
 
   /* create and send the answer */
-  memset(&cmd, 0, sizeof(rpcp_cmd_t));
+  memset(&cmd, 0, sizeof(pilot_cmd_t));
   cmd.target = target_t_from_module_slot_and_port(slot, 0),
-  cmd.type = rpcp_cmd_type_lora_get_enable;
-  cmd.data[(int)rpcp_lora_enable_index_value] = enabled;
+  cmd.type = pilot_cmd_type_lora_get_enable;
+  cmd.data[(int)pilot_lora_enable_index_value] = enabled;
   cmd.length = MSG_LEN(4); //minimum length
-  rpcp_pilot_comm_send_cmd(&cmd);
+  pilot_comm_send_cmd(&cmd);
 $endif$
 }
 //END LORA
@@ -872,7 +872,7 @@ static void rpc_rpi_gps_get_enable(module_slot_t slot)
 {
 $if(model.GPSs)$
   int enabled;
-  rpcp_cmd_t cmd;
+  pilot_cmd_t cmd;
 
   /* get the state */
   switch (slot)
@@ -884,45 +884,45 @@ $model.GPSs:{gps|
   }
 
   /* create and send the answer */
-  memset(&cmd, 0, sizeof(rpcp_cmd_t));
+  memset(&cmd, 0, sizeof(pilot_cmd_t));
   cmd.target = target_t_from_module_slot_and_port(slot, 0),
-  cmd.type = rpcp_cmd_type_gps_get_enable;
-  cmd.data[(int)rpcp_gps_enable_index_value] = enabled;
+  cmd.type = pilot_cmd_type_gps_get_enable;
+  cmd.data[(int)pilot_gps_enable_index_value] = enabled;
   cmd.length = MSG_LEN(4); //minimum length
-  rpcp_pilot_comm_send_cmd(&cmd);
+  pilot_comm_send_cmd(&cmd);
 $endif$
 }
 
-static void rpcp_rpi_gsm_set_enable(module_slot_t slot, int enable)
+static void pilot_rpi_gsm_set_enable(module_slot_t slot, int enable)
 {
 $model.GSMs:{gsm|
 if (slot == $gsm.Slot$)
-  rpcp_$gsm.Name$_set_enable(enable);
+  pilot_$gsm.Name$_set_enable(enable);
 }; separator = "\n"$
 }
 
-static void rpcp_rpi_gsm_get_enable(module_slot_t slot)
+static void pilot_rpi_gsm_get_enable(module_slot_t slot)
 {
 $if(model.GSMs)$
-  rpcp_cmd_t cmd;
+  pilot_cmd_t cmd;
   int enabled;
 
   /* get the state */
   switch (slot)
   {
 $model.GSMs:{gsm |
-  case $gsm.Slot$: enabled = rpcp_$gsm.Name$_get_enable(); break;
+  case $gsm.Slot$: enabled = pilot_$gsm.Name$_get_enable(); break;
 }; separator = "\n"$
     default: RETURN;
   }
 
   /* create and the answer */
-  memset(&cmd, 0, sizeof(rpcp_cmd_t));
+  memset(&cmd, 0, sizeof(pilot_cmd_t));
   cmd.target = target_t_from_module_slot_and_port(slot, 0);
-  cmd.type = rpcp_cmd_type_gsm_get_enable;
-  cmd.data[(int)rpcp_gsm_enable_index_value] = enabled;
+  cmd.type = pilot_cmd_type_gsm_get_enable;
+  cmd.data[(int)pilot_gsm_enable_index_value] = enabled;
   cmd.length = MSG_LEN(4); //minimum length
-  rpcp_pilot_comm_send_cmd(&cmd);
+  pilot_comm_send_cmd(&cmd);
 $endif$
 }
 
@@ -938,7 +938,7 @@ static void rpc_rpi_onewire_get_enable(module_slot_t slot)
 {
 $if(model.OneWires)$
   int enabled;
-  rpcp_cmd_t cmd;
+  pilot_cmd_t cmd;
 
   /* get the state */
   switch ((int)slot)
@@ -950,87 +950,87 @@ $model.OneWires:{ow|
   }
 
   /* create and send the answer */
-  memset(&cmd, 0, sizeof(rpcp_cmd_t));
+  memset(&cmd, 0, sizeof(pilot_cmd_t));
   cmd.target = target_t_from_module_slot_and_port(slot, 0);
-  cmd.type = rpcp_cmd_type_onewire_get_enable;
-  cmd.data[(int)rpcp_onewire_enable_index_value] = enabled;
+  cmd.type = pilot_cmd_type_onewire_get_enable;
+  cmd.data[(int)pilot_onewire_enable_index_value] = enabled;
   cmd.length = MSG_LEN(4); //minimum length
-  rpcp_pilot_comm_send_cmd(&cmd);
+  pilot_comm_send_cmd(&cmd);
 $endif$
 }
 
-static void rpcp_rpi_slcd_update(module_slot_t slot)
+static void pilot_rpi_slcd_update(module_slot_t slot)
 {
 $if(model.SLCDs)$
   switch ((int)slot)
   {
 $model.SLCDs:{slcd|
-  case $slcd.Slot$: rpcp_$slcd.Name$_update_buffer_start();
+  case $slcd.Slot$: pilot_$slcd.Name$_update_buffer_start();
 };separator="\n"$
   }
 $endif$
 }
 
-static void rpcp_rpi_slcd_get_resolution(module_slot_t slot)
+static void pilot_rpi_slcd_get_resolution(module_slot_t slot)
 {
 $if(model.SLCDs)$
 
   int i;
-  rpcp_cmd_t cmd;
+  pilot_cmd_t cmd;
   slcd_resolution_t resolution;
 
   switch ((int)slot)
   {
 $model.SLCDs:{slcd|
-  case $slcd.Slot$: rpcp_$slcd.Name$_get_resolution(&resolution); break;
+  case $slcd.Slot$: pilot_$slcd.Name$_get_resolution(&resolution); break;
 };separator="\n"$
   }
 
   /* setup the answer */
-  memset(&cmd, 0, sizeof(rpcp_cmd_t));
+  memset(&cmd, 0, sizeof(pilot_cmd_t));
   cmd.target = target_t_from_module_slot_and_port(slot, 0);
-  cmd.type = rpcp_cmd_type_slcd_get_resolution;
+  cmd.type = pilot_cmd_type_slcd_get_resolution;
   for (i = 0; i < sizeof(int32_t); i++)
-    cmd.data[(int)rpcp_slcd_resolution_index_width + i] = BYTE_FROM_INT(resolution.width, i);
+    cmd.data[(int)pilot_slcd_resolution_index_width + i] = BYTE_FROM_INT(resolution.width, i);
   for (i = 0; i < sizeof(int32_t); i++)
-    cmd.data[(int)rpcp_slcd_resolution_index_height + i] = BYTE_FROM_INT(resolution.height, i);
+    cmd.data[(int)pilot_slcd_resolution_index_height + i] = BYTE_FROM_INT(resolution.height, i);
 
   /* send the command */
   cmd.length = MSG_LEN(8);
-  rpcp_pilot_comm_send_cmd(&cmd);
+  pilot_comm_send_cmd(&cmd);
 
 $endif$
 }
 
-static void rpcp_rpi_slcd_set_resolution(module_slot_t slot, rpcp_cmd_t *cmd)
+static void pilot_rpi_slcd_set_resolution(module_slot_t slot, pilot_cmd_t *cmd)
 {
 $if(model.SLCDs)$
   slcd_resolution_t resolution;
 
-  resolution.width = INT_FROM_BYTES( (cmd->data + (int)rpcp_slcd_resolution_index_width) );
-  resolution.height = INT_FROM_BYTES( (cmd->data + (int)rpcp_slcd_resolution_index_height) );
+  resolution.width = INT_FROM_BYTES( (cmd->data + (int)pilot_slcd_resolution_index_width) );
+  resolution.height = INT_FROM_BYTES( (cmd->data + (int)pilot_slcd_resolution_index_height) );
 
   /* update the resolution */
   switch ((int)slot)
   {
 $model.SLCDs:{slcd|
-    case $slcd.Slot$: rpcp_$slcd.Name$_set_resolution(&resolution); break;
+    case $slcd.Slot$: pilot_$slcd.Name$_set_resolution(&resolution); break;
 };separator="\n"$
   }
 $endif$
 }
 
-static void rpc_pilot_comm_set_output(module_slot_t slot, rpcp_output_target_t output, uint16_t value)
+static void rpc_pilot_comm_set_output(module_slot_t slot, pilot_output_target_t output, uint16_t value)
 {
   switch (slot)
   {
-    $model.O8s:{o8|case $o8.Slot$: rpcp_$o8.Name$_set_value(output, value); break;};separator="\n"$
+    $model.O8s:{o8|case $o8.Slot$: pilot_$o8.Name$_set_value(output, value); break;};separator="\n"$
     $model.IO16s:{io16|case $io16.Slot$: rpc_$io16.Name$_set_value(output, value); break;};separator="\n"$
     $model.AIO20s:{aio20|case $aio20.Slot$: single_ended_dac_write($aio20.Slot$, output, value); break;};separator="\n"$
   }
 }
 
-static void rpc_rpi_io16_set_direction(module_slot_t slot, rpcp_io16_block_t block, rpcp_io16_direction_t direction)
+static void rpc_rpi_io16_set_direction(module_slot_t slot, pilot_io16_block_t block, pilot_io16_direction_t direction)
 {
   switch (slot)
   {
@@ -1038,17 +1038,17 @@ static void rpc_rpi_io16_set_direction(module_slot_t slot, rpcp_io16_block_t blo
   }
 }
 
-static void rpcp_pilot_comm_get_board_uid()
+static void pilot_comm_get_board_uid()
 {
-  int i; rpcp_cmd_t cmd; uint32_t uid;
+  int i; pilot_cmd_t cmd; uint32_t uid;
 
   /* setup the cmd */
-  memset(&cmd, 0, sizeof(rpcp_cmd_t));
+  memset(&cmd, 0, sizeof(pilot_cmd_t));
   cmd.target = target_base;
-  cmd.type = rpcp_cmd_type_eeprom_uid_get;
+  cmd.type = pilot_cmd_type_eeprom_uid_get;
 
   /* read the uid from the base eeprom */
-  if (rpcp_eeprom_get_board_uid(&uid))
+  if (pilot_eeprom_get_board_uid(&uid))
   {
     /* encode the uid in the cmd data */
     for (i = 0; i < 4; i++)
@@ -1057,145 +1057,145 @@ static void rpcp_pilot_comm_get_board_uid()
 
   /* send the reply */
   cmd.length = MSG_LEN(4);
-  rpcp_pilot_comm_send_cmd(&cmd);
+  pilot_comm_send_cmd(&cmd);
 }
 
-static void rpcp_pilot_comm_get_uid(module_slot_t module_slot)
+static void pilot_comm_get_uid(module_slot_t module_slot)
 {
-  int i; rpcp_cmd_t cmd; rpcp_eeprom_uid_t uid;
+  int i; pilot_cmd_t cmd; pilot_eeprom_uid_t uid;
 
   /* setup the cmd */
-  memset(&cmd, 0, sizeof(rpcp_cmd_t));
+  memset(&cmd, 0, sizeof(pilot_cmd_t));
   cmd.target = target_t_from_module_slot_and_port(module_slot, module_port_1);
-  cmd.type = rpcp_cmd_type_eeprom_uid_get;
+  cmd.type = pilot_cmd_type_eeprom_uid_get;
 
   /* read the uid from the module's eeprom */
-  if (rpcp_eeprom_get_module_uid(module_slot, &uid))
+  if (pilot_eeprom_get_module_uid(module_slot, &uid))
   {
     /* encode the uid in the cmd data */
-    for (i = 0; i < rpcp_cmd_t_data_size && i < EEPROM_UID_LENGTH; i++)
+    for (i = 0; i < pilot_cmd_t_data_size && i < EEPROM_UID_LENGTH; i++)
       cmd.data[i] = uid.uid[i];
   }
 
   /* send the reply */
   cmd.length = MSG_LEN(EEPROM_UID_LENGTH);
-  rpcp_pilot_comm_send_cmd(&cmd);
+  pilot_comm_send_cmd(&cmd);
 }
 
-static void rpcp_pilot_comm_get_hid(module_slot_t module_slot)
+static void pilot_comm_get_hid(module_slot_t module_slot)
 {
-  int i; rpcp_cmd_t cmd; rpcp_eeprom_hid_t hid; rpcp_eeprom_uid_t uid;
+  int i; pilot_cmd_t cmd; pilot_eeprom_hid_t hid; pilot_eeprom_uid_t uid;
 
   /* setup the cmd */
-  memset(&cmd, 0, sizeof(rpcp_cmd_t));
+  memset(&cmd, 0, sizeof(pilot_cmd_t));
   cmd.target = target_t_from_module_slot_and_port(module_slot, module_port_1);
-  cmd.type = rpcp_cmd_type_eeprom_hid_get;
+  cmd.type = pilot_cmd_type_eeprom_hid_get;
 
   /* every mem cmd must start with an rom cmd */
-  if (rpcp_eeprom_get_module_uid(module_slot, &uid))
+  if (pilot_eeprom_get_module_uid(module_slot, &uid))
   {
     /* read the hid from the module's eeprom */
-    rpcp_eeprom_get_module_hid(module_slot, &hid);
+    pilot_eeprom_get_module_hid(module_slot, &hid);
 
     /* encode the hid in the cmd data */
-    for (i = 0; i < rpcp_cmd_t_data_size && i < EEPROM_HID_LENGTH; i++)
+    for (i = 0; i < pilot_cmd_t_data_size && i < EEPROM_HID_LENGTH; i++)
       cmd.data[i] = hid.data[i];
   }
 
   /* send the reply */
   cmd.length = MSG_LEN(EEPROM_HID_LENGTH);
-  rpcp_pilot_comm_send_cmd(&cmd);
+  pilot_comm_send_cmd(&cmd);
 }
 
-static void rpcp_pilot_comm_set_hid(module_slot_t module_slot, rpcp_cmd_t *cmd)
+static void pilot_comm_set_hid(module_slot_t module_slot, pilot_cmd_t *cmd)
 {
-  rpcp_eeprom_uid_t uid;
-  rpcp_eeprom_hid_t hid;
+  pilot_eeprom_uid_t uid;
+  pilot_eeprom_hid_t hid;
   int i; 
 
   /* decode the hid from the cmd data */
-  for (i = 0; i < rpcp_cmd_t_data_size && i < EEPROM_HID_LENGTH; i++)
+  for (i = 0; i < pilot_cmd_t_data_size && i < EEPROM_HID_LENGTH; i++)
     hid.data[i] = cmd->data[i];
 
   /* every mem cmd must start with the an rom cmd */
-  rpcp_eeprom_get_module_uid(module_slot, &uid);
+  pilot_eeprom_get_module_uid(module_slot, &uid);
 
   /* try to set the hid of module */
-  rpcp_eeprom_set_module_hid(module_slot, &hid);
+  pilot_eeprom_set_module_hid(module_slot, &hid);
 }
 
-static void rpcp_pilot_comm_get_fid(module_slot_t module_slot)
+static void pilot_comm_get_fid(module_slot_t module_slot)
 {
-  int i; rpcp_cmd_t cmd; rpcp_eeprom_fid_t fid; rpcp_eeprom_uid_t uid;
+  int i; pilot_cmd_t cmd; pilot_eeprom_fid_t fid; pilot_eeprom_uid_t uid;
 
   /* setup the cmd */
-  memset(&cmd, 0, sizeof(rpcp_cmd_t));
+  memset(&cmd, 0, sizeof(pilot_cmd_t));
   cmd.target = target_t_from_module_slot_and_port(module_slot, module_port_1);
-  cmd.type = rpcp_cmd_type_eeprom_fid_get;
+  cmd.type = pilot_cmd_type_eeprom_fid_get;
 
   /* every mem cmd must start with an rom cmd */
-  if (rpcp_eeprom_get_module_uid(module_slot, &uid))
+  if (pilot_eeprom_get_module_uid(module_slot, &uid))
   {
     /* read the fid from the module's eeprom */
-    rpcp_eeprom_get_module_fid(module_slot, &fid);
+    pilot_eeprom_get_module_fid(module_slot, &fid);
 
     /* encode the fid in the cmd data */
-    for (i = 0; i < rpcp_cmd_t_data_size && i < EEPROM_FID_LENGTH; i++)
+    for (i = 0; i < pilot_cmd_t_data_size && i < EEPROM_FID_LENGTH; i++)
       cmd.data[i] = fid.data[i];
   }
 
   /* send the reply */
   cmd.length = MSG_LEN(EEPROM_FID_LENGTH);
-  rpcp_pilot_comm_send_cmd(&cmd);
+  pilot_comm_send_cmd(&cmd);
 }
 
-static void rpcp_pilot_comm_set_fid(module_slot_t module_slot, rpcp_cmd_t *cmd)
+static void pilot_comm_set_fid(module_slot_t module_slot, pilot_cmd_t *cmd)
 {
-  rpcp_eeprom_uid_t uid;
-  rpcp_eeprom_fid_t fid;
+  pilot_eeprom_uid_t uid;
+  pilot_eeprom_fid_t fid;
   int i; 
 
   /* decode the fid from the cmd data */
-  for (i = 0; i < rpcp_cmd_t_data_size && i < EEPROM_FID_LENGTH; i++)
+  for (i = 0; i < pilot_cmd_t_data_size && i < EEPROM_FID_LENGTH; i++)
     fid.data[i] = cmd->data[i];
 
   /* every mem cmd must start with the rom cmd */
-  rpcp_eeprom_get_module_uid(module_slot, &uid);
+  pilot_eeprom_get_module_uid(module_slot, &uid);
 
   /* try to set the fid of module */
-  rpcp_eeprom_set_module_fid(module_slot, &fid);
+  pilot_eeprom_set_module_fid(module_slot, &fid);
 }
 
-static void rpcp_pilot_comm_get_eeprom_userdata(module_slot_t module_slot, const rpcp_cmd_t *cmd)
+static void pilot_comm_get_eeprom_userdata(module_slot_t module_slot, const pilot_cmd_t *cmd)
 {
-  int i; rpcp_cmd_t reply; rpcp_eeprom_uid_t uid; rpcp_eeprom_data_t data;
+  int i; pilot_cmd_t reply; pilot_eeprom_uid_t uid; pilot_eeprom_data_t data;
 
   /* get the user data index */
-  int data_index = cmd->data[rpcp_eeprom_userdata_index_number];
+  int data_index = cmd->data[pilot_eeprom_userdata_index_number];
 
   /* every mem cmd must start with an rom cmd */
-  if (rpcp_eeprom_get_module_uid(module_slot, &uid))
+  if (pilot_eeprom_get_module_uid(module_slot, &uid))
   {
     /* read the user data from the module's eeprom */
-    rpcp_eeprom_get_module_userdata(module_slot, data_index, &data);
+    pilot_eeprom_get_module_userdata(module_slot, data_index, &data);
   }
 
   /* setup the reply */
-  memset(&reply, 0, sizeof(rpcp_cmd_t));
+  memset(&reply, 0, sizeof(pilot_cmd_t));
   reply.target = eeprom_encode_module_slot_and_data_index(module_slot, data_index);
-  reply.type = rpcp_cmd_type_eeprom_userdata_get;
-  for (i = 0; i < rpcp_cmd_t_data_size && i < EEPROM_DATA_LENGTH; i++)
+  reply.type = pilot_cmd_type_eeprom_userdata_get;
+  for (i = 0; i < pilot_cmd_t_data_size && i < EEPROM_DATA_LENGTH; i++)
     reply.data[i] = data.data[i];
 
   /* send the reply */
   reply.length = MSG_LEN(EEPROM_DATA_LENGTH);
-  rpcp_pilot_comm_send_cmd(&reply);
+  pilot_comm_send_cmd(&reply);
 }
 
-static void rpcp_pilot_comm_set_eeprom_userdata(const rpcp_cmd_t *cmd)
+static void pilot_comm_set_eeprom_userdata(const pilot_cmd_t *cmd)
 {
-  rpcp_eeprom_uid_t uid;
-  rpcp_eeprom_data_t data;
+  pilot_eeprom_uid_t uid;
+  pilot_eeprom_data_t data;
   int i;
 
   /* get the user data index */
@@ -1203,37 +1203,37 @@ static void rpcp_pilot_comm_set_eeprom_userdata(const rpcp_cmd_t *cmd)
   int module_slot = eeprom_decode_module_slot(cmd->target);
 
   /* get the user data from the cmd */
-  for (i = 0; i < rpcp_cmd_t_data_size && i < EEPROM_DATA_LENGTH; i++)
+  for (i = 0; i < pilot_cmd_t_data_size && i < EEPROM_DATA_LENGTH; i++)
     data.data[i] = cmd->data[i];
 
   /* every mem cmd must start with the rom cmd */
-  rpcp_eeprom_get_module_uid(module_slot, &uid);
+  pilot_eeprom_get_module_uid(module_slot, &uid);
 
   /* try to set the user data block */
-  rpcp_eeprom_set_module_userdata(module_slot, data_index, &data);
+  pilot_eeprom_set_module_userdata(module_slot, data_index, &data);
 }
 
-static void rpcp_pilot_comm_get_module_type(module_slot_t module_slot)
+static void pilot_comm_get_module_type(module_slot_t module_slot)
 {
   int i;
   /* setup the cmd */
-  rpcp_cmd_t cmd;
-  memset(&cmd, 0, sizeof(rpcp_cmd_t));
+  pilot_cmd_t cmd;
+  memset(&cmd, 0, sizeof(pilot_cmd_t));
   cmd.target = target_t_from_module_slot_and_port(module_slot, module_port_1);
-  cmd.type   = rpcp_cmd_type_module_type_get;
+  cmd.type   = pilot_cmd_type_module_type_get;
 
   /* copy module type to the data */
   switch (module_slot)
   {
 $model.Modules:{m|
-    case $m.Slot$: strncpy(cmd.data, "$m.Name$", rpcp_cmd_t_data_size); break;
+    case $m.Slot$: strncpy(cmd.data, "$m.Name$", pilot_cmd_t_data_size); break;
 };separator="\n"$
     default: break;
   }
 
   /* send the reply */
   cmd.length = MSG_LEN(8);
-  rpcp_pilot_comm_send_cmd(&cmd);
+  pilot_comm_send_cmd(&cmd);
 }
 
 $if(model.PLC)$
@@ -1250,31 +1250,31 @@ $if(model.PLC)$
   extern unsigned long long __tick;
 $endif$
 
-static void rpcp_rpi_plc_state_get()
+static void pilot_rpi_plc_state_get()
 {
 $if(model.PLC)$
-  rpcp_cmd_t cmd;
-  memset(&cmd, 0, sizeof(rpcp_cmd_t));
+  pilot_cmd_t cmd;
+  memset(&cmd, 0, sizeof(pilot_cmd_t));
   cmd.target = target_base;
-  cmd.type = rpcp_cmd_type_plc_state_get;
-  cmd.data[(int)rpcp_plc_state_index] = plc_state;
+  cmd.type = pilot_cmd_type_plc_state_get;
+  cmd.data[(int)pilot_plc_state_index] = plc_state;
   cmd.length = MSG_LEN(4);
-  rpcp_pilot_comm_send_cmd(&cmd);
+  pilot_comm_send_cmd(&cmd);
 $endif$
 }
 
-static void rpcp_rpi_plc_state_set(rpcp_cmd_t *cmd)
+static void pilot_rpi_plc_state_set(pilot_cmd_t *cmd)
 {
 $if(model.PLC)$
-  plc_state = (int)cmd->data[(int)rpcp_plc_state_index];
+  plc_state = (int)cmd->data[(int)pilot_plc_state_index];
 $endif$
 }
 
-static void rpcp_rpi_plc_cycletimes_get()
+static void pilot_rpi_plc_cycletimes_get()
 {
 $if(model.PLC)$
   int i;
-  rpcp_cmd_t cmd;
+  pilot_cmd_t cmd;
   uint16_t min, max, cur, tick, comm, read, program, write;
   /* get the current values */
   min = (uint16_t) cycle_min / ($model.ClockSpeed$ / 1000000);
@@ -1287,64 +1287,64 @@ $if(model.PLC)$
   tick = (uint16_t) __tick;
 
   /* create the answer */
-  memset(&cmd, 0, sizeof(rpcp_cmd_t));
+  memset(&cmd, 0, sizeof(pilot_cmd_t));
   cmd.target = target_base;
-  cmd.type = rpcp_cmd_type_plc_cycletimes_get;
+  cmd.type = pilot_cmd_type_plc_cycletimes_get;
   for (i = 0; i < sizeof(min); i++)
-    cmd.data[(int)rpcp_plc_cycletimes_index_min + i] = BYTE_FROM_UINT16(min, i);
+    cmd.data[(int)pilot_plc_cycletimes_index_min + i] = BYTE_FROM_UINT16(min, i);
   for (i = 0; i < sizeof(max); i++)
-    cmd.data[(int)rpcp_plc_cycletimes_index_max + i] = BYTE_FROM_UINT16(max, i);
+    cmd.data[(int)pilot_plc_cycletimes_index_max + i] = BYTE_FROM_UINT16(max, i);
   for (i = 0; i < sizeof(cur); i++)
-    cmd.data[(int)rpcp_plc_cycletimes_index_cur + i] = BYTE_FROM_UINT16(cur, i);
+    cmd.data[(int)pilot_plc_cycletimes_index_cur + i] = BYTE_FROM_UINT16(cur, i);
   for (i = 0; i < sizeof(tick); i++)
-    cmd.data[(int)rpcp_plc_cycletimes_index_tick + i] = BYTE_FROM_UINT16(tick, i);
+    cmd.data[(int)pilot_plc_cycletimes_index_tick + i] = BYTE_FROM_UINT16(tick, i);
 
   for (i = 0; i < sizeof(comm); i++)
-    cmd.data[(int)rpcp_plc_cycletimes_index_comm + i] = BYTE_FROM_UINT16(comm, i);
+    cmd.data[(int)pilot_plc_cycletimes_index_comm + i] = BYTE_FROM_UINT16(comm, i);
   for (i = 0; i < sizeof(read); i++)
-    cmd.data[(int)rpcp_plc_cycletimes_index_read + i] = BYTE_FROM_UINT16(read, i);
+    cmd.data[(int)pilot_plc_cycletimes_index_read + i] = BYTE_FROM_UINT16(read, i);
   for (i = 0; i < sizeof(program); i++)
-    cmd.data[(int)rpcp_plc_cycletimes_index_program + i] = BYTE_FROM_UINT16(program, i);
+    cmd.data[(int)pilot_plc_cycletimes_index_program + i] = BYTE_FROM_UINT16(program, i);
   for (i = 0; i < sizeof(write); i++)
-    cmd.data[(int)rpcp_plc_cycletimes_index_write + i] = BYTE_FROM_UINT16(write, i);
+    cmd.data[(int)pilot_plc_cycletimes_index_write + i] = BYTE_FROM_UINT16(write, i);
 
 
   /* send the answer */
   cmd.length = MSG_LEN(16);
-  rpcp_pilot_comm_send_cmd(&cmd);
+  pilot_comm_send_cmd(&cmd);
 
 $endif$
 }
 
-static void rpcp_rpi_plc_variables_read_config(rpcp_cmd_t *cmd)
+static void pilot_rpi_plc_variables_read_config(pilot_cmd_t *cmd)
 {
 $if(model.PLC)$
   /* prepare to receive the variables numbers */
-  _internals.plc.read_config.expected = INT_FROM_BYTES((cmd->data + (int)rpcp_plc_variables_value_index_size));
+  _internals.plc.read_config.expected = INT_FROM_BYTES((cmd->data + (int)pilot_plc_variables_value_index_size));
   _internals.plc.read_config.count = 0;
   _internals.plc.read_config.has_last_char  = 0;
 $endif$
 }
 
-static void rpcp_rpi_plc_variables_read_config_reply(int successful)
+static void pilot_rpi_plc_variables_read_config_reply(int successful)
 {
 $if(model.PLC)$
-  rpcp_cmd_t cmd;
-  memset(&cmd, 0, sizeof(rpcp_cmd_t));
+  pilot_cmd_t cmd;
+  memset(&cmd, 0, sizeof(pilot_cmd_t));
   cmd.target = target_base;
-  cmd.type = rpcp_cmd_type_plc_variables_read_config;
+  cmd.type = pilot_cmd_type_plc_variables_read_config;
   cmd.data[0] = successful ? 1 : 0;
   cmd.length = MSG_LEN(4);
   
-  rpcp_pilot_comm_send_cmd(&cmd);
+  pilot_comm_send_cmd(&cmd);
 $endif$
 }
 
-static void rpcp_pilot_comm_handle_plc_readdata(char data)
+static void pilot_comm_handle_plc_readdata(char data)
 {
 $if(model.PLC)$
   uint16_t number;
-  rpcp_plc_vars_config_t *cfg = &_internals.plc.read_config;
+  pilot_plc_vars_config_t *cfg = &_internals.plc.read_config;
 
   /* collect the plc data */
   if (cfg->count < MAX_PLC_VARS)
@@ -1369,38 +1369,38 @@ $if(model.PLC)$
         _internals.plc.read_values.size = configure_plc_read_variables(cfg->numbers, cfg->count);
 
         /* send a variables config reply to signal that the configuration is complete */
-        rpcp_rpi_plc_variables_read_config_reply(_internals.plc.read_values.size <= MAX_PLC_VARS_SIZE);
+        pilot_rpi_plc_variables_read_config_reply(_internals.plc.read_values.size <= MAX_PLC_VARS_SIZE);
       }
     }
   }
 $endif$
 }
 
-static void rpcp_rpi_plc_variables_write_config(rpcp_cmd_t *cmd)
+static void pilot_rpi_plc_variables_write_config(pilot_cmd_t *cmd)
 {
 $if(model.PLC)$
   /* prepare to receive the variable numbers */
-  _internals.plc.write_config.expected = INT_FROM_BYTES((cmd->data + (int)rpcp_plc_variables_value_index_size));
+  _internals.plc.write_config.expected = INT_FROM_BYTES((cmd->data + (int)pilot_plc_variables_value_index_size));
   _internals.plc.write_config.count = 0;
   _internals.plc.write_config.has_last_char = 0;
 $endif$
 }
 
-static void rpcp_rpi_plc_variables_write_config_reply(int successful)
+static void pilot_rpi_plc_variables_write_config_reply(int successful)
 {
 $if(model.PLC)$
-  rpcp_cmd_t cmd;
-  memset(&cmd, 0, sizeof(rpcp_cmd_t));
+  pilot_cmd_t cmd;
+  memset(&cmd, 0, sizeof(pilot_cmd_t));
   cmd.target = target_base;
-  cmd.type = rpcp_cmd_type_plc_variables_write_config;
+  cmd.type = pilot_cmd_type_plc_variables_write_config;
   cmd.data[0] = successful ? 1 : 0;
   cmd.length = MSG_LEN(4);
-  rpcp_pilot_comm_send_cmd(&cmd);
+  pilot_comm_send_cmd(&cmd);
 $endif$
 }
 
 $if(model.PLC)$
-static void rpcp_pilot_comm_handle_plc_writeconfig(rpcp_plc_vars_config_t *cfg, char data)
+static void pilot_comm_handle_plc_writeconfig(pilot_plc_vars_config_t *cfg, char data)
 {
   uint16_t number;
 
@@ -1427,26 +1427,26 @@ static void rpcp_pilot_comm_handle_plc_writeconfig(rpcp_plc_vars_config_t *cfg, 
         configure_plc_write_variables(cfg->numbers, cfg->count);
 
         /* send a variables config reply to signal that the configuration is complete */
-        rpcp_rpi_plc_variables_write_config_reply(1);
+        pilot_rpi_plc_variables_write_config_reply(1);
       }
     }
   }
 }
 
-static void rpcp_rpi_plc_variables_write_values_reply()
+static void pilot_rpi_plc_variables_write_values_reply()
 {
-  rpcp_cmd_t cmd;
+  pilot_cmd_t cmd;
   /* setup the cmd */
-  memset(&cmd, 0, sizeof(rpcp_cmd_t));
+  memset(&cmd, 0, sizeof(pilot_cmd_t));
   cmd.target = target_plc_write;
-  cmd.type = rpcp_cmd_type_plc_variables_set;
+  cmd.type = pilot_cmd_type_plc_variables_set;
   
   /* send the cmd */
   cmd.length = 0; //no payload
-  rpcp_pilot_comm_send_cmd(&cmd);
+  pilot_comm_send_cmd(&cmd);
 }
 
-static void rpcp_pilot_comm_handle_plc_writevalues(rpcp_plc_vars_write_values_t *val, char data)
+static void pilot_comm_handle_plc_writevalues(pilot_plc_vars_write_values_t *val, char data)
 {
   /* if there is room in the buffer */
   if (val->count < MAX_PLC_VARS_SIZE)
@@ -1461,7 +1461,7 @@ static void rpcp_pilot_comm_handle_plc_writevalues(rpcp_plc_vars_write_values_t 
       write_plc_variables(val->buffer, val->count);
 
       /* send a variables value set reply to signal that the values setting is complete */
-      rpcp_rpi_plc_variables_write_values_reply();
+      pilot_rpi_plc_variables_write_values_reply();
     }
   }
 }
@@ -1471,11 +1471,11 @@ void send_subscribed_plc_variable(int plc_variable_number)
 {  
   if (plc_variable_number != -1 && _internals.bufferstate != stm_bufferstate_full)
   {
-    rpcp_cmd_t cmd;
+    pilot_cmd_t cmd;
     /* setup the cmd */
-    memset(&cmd, 0, sizeof(rpcp_cmd_t));
+    memset(&cmd, 0, sizeof(pilot_cmd_t));
     cmd.target = target_base;
-    cmd.type = rpcp_cmd_type_plc_variable_get;
+    cmd.type = pilot_cmd_type_plc_variable_get;
  
     read_from_plc_variable(plc_variable_number, cmd.data, 0);
 
@@ -1483,7 +1483,7 @@ void send_subscribed_plc_variable(int plc_variable_number)
 
     /* send the answer */
     cmd.length = MSG_LEN(12);
-    rpcp_pilot_comm_send_cmd(&cmd);
+    pilot_comm_send_cmd(&cmd);
   }  
 }
 
@@ -1491,48 +1491,48 @@ $endif$
 
 /* is called when receiving stream data with target plc write,
    used for the write configuration and the write values */
-static void rpcp_pilot_comm_handle_plc_writedata(char data)
+static void pilot_comm_handle_plc_writedata(char data)
 {
   $if(model.PLC)$
-  rpcp_plc_vars_config_t *cfg = &_internals.plc.write_config;
-  rpcp_plc_vars_write_values_t *val = &_internals.plc.write_values;
+  pilot_plc_vars_config_t *cfg = &_internals.plc.write_config;
+  pilot_plc_vars_write_values_t *val = &_internals.plc.write_values;
 
   /* is the data supposed to be write configuration? */
   if (cfg->count < cfg->expected)
-    rpcp_pilot_comm_handle_plc_writeconfig(cfg, data);
+    pilot_comm_handle_plc_writeconfig(cfg, data);
   /* is the data supposed to be a write value? */
   else if(val->count < val->expected)
-    rpcp_pilot_comm_handle_plc_writevalues(val, data);
+    pilot_comm_handle_plc_writevalues(val, data);
 
   $endif$
 }
 
-static void rpcp_rpi_plc_variables_get_reply(int size)
+static void pilot_rpi_plc_variables_get_reply(int size)
 {
 $if(model.PLC)$
   int i;
   /* prepare the reply to plc variables get command */
-  rpcp_cmd_t cmd;
+  pilot_cmd_t cmd;
   memset(&cmd, 0, sizeof(cmd));
   cmd.target = target_base;
-  cmd.type = rpcp_cmd_type_plc_variables_get;
+  cmd.type = pilot_cmd_type_plc_variables_get;
 
   for (i = 0; i < sizeof(int); i++)
-    cmd.data[(int)rpcp_plc_variables_value_index_size + i] = BYTE_FROM_INT(size, i);
+    cmd.data[(int)pilot_plc_variables_value_index_size + i] = BYTE_FROM_INT(size, i);
 
   /* send the answer with the size of the variables */
   cmd.length = MSG_LEN(8);
-  rpcp_pilot_comm_send_cmd(&cmd);
+  pilot_comm_send_cmd(&cmd);
 
 $endif$
 }
 
 /* is called when the plc variables get cmd is received */
-static void rpcp_rpi_plc_variables_get()
+static void pilot_rpi_plc_variables_get()
 {
   $if(model.PLC)$
   int actual_size;
-  rpcp_plc_vars_values_t *values = &_internals.plc.read_values;
+  pilot_plc_vars_values_t *values = &_internals.plc.read_values;
 
   /* send the variable values back as a stream */
   if (values->size > 0 && values->size <= MAX_PLC_VARS_SIZE)
@@ -1541,17 +1541,17 @@ static void rpcp_rpi_plc_variables_get()
     actual_size = read_plc_variables(_internals.plc.read_values.buffer);
 
     /* send the variables get reply */
-    rpcp_rpi_plc_variables_get_reply(actual_size);
+    pilot_rpi_plc_variables_get_reply(actual_size);
 
     /* send the variable values back as a stream */
-    rpcp_pilot_comm_send(target_plc_read, _internals.plc.read_values.buffer, actual_size);
+    pilot_comm_send(target_plc_read, _internals.plc.read_values.buffer, actual_size);
   }
 
 $endif$
 }
 
 /* is called when the plc variable get cmd is received */
-static void rpcp_rpi_plc_variable_get(rpcp_cmd_t * cmd)
+static void pilot_rpi_plc_variable_get(pilot_cmd_t * cmd)
 {
 $if(model.PLC)$
   read_from_plc_variable(*((uint16_t *)&cmd->data[8]), cmd->data, 0);
@@ -1559,38 +1559,38 @@ $if(model.PLC)$
 
   /* send the answer */
   cmd->length = MSG_LEN(12); //TODO make size dynamic depending on var size
-  rpcp_pilot_comm_send_cmd(cmd);
+  pilot_comm_send_cmd(cmd);
 $endif$
 }
 
 /* is called when the plc variable get cmd is received */
-static void rpcp_rpi_plc_variable_set(rpcp_cmd_t * cmd)
+static void pilot_rpi_plc_variable_set(pilot_cmd_t * cmd)
 {
 $if(model.PLC)$
   write_to_plc_variable(*((uint16_t *)&cmd->data[8]), (uint8_t *)cmd->data, 0);
  
   /* send the answer */
   cmd->length = MSG_LEN(12); //TODO make size dynamic depending on var size
-  rpcp_pilot_comm_send_cmd(cmd);
+  pilot_comm_send_cmd(cmd);
 $endif$
 }
 
 /* is called when the plc variables set cmd is received */
-static void rpcp_rpi_plc_variables_set(rpcp_cmd_t *cmd)
+static void pilot_rpi_plc_variables_set(pilot_cmd_t *cmd)
 {
 $if(model.PLC)$
   /* expect a variables command stream */
-  _internals.plc.write_values.expected = INT_FROM_BYTES((cmd->data + (int)rpcp_plc_variables_value_index_size));
+  _internals.plc.write_values.expected = INT_FROM_BYTES((cmd->data + (int)pilot_plc_variables_value_index_size));
   _internals.plc.write_values.count = 0;
 $endif$
 }
 
-static void rpcp_pilot_comm_run_test(rpcp_cmd_t *cmd)
+static void pilot_comm_run_test(pilot_cmd_t *cmd)
 {
-  rpcp_cmd_t reply;
-  memset(&reply, 0, sizeof(rpcp_cmd_t));
+  pilot_cmd_t reply;
+  memset(&reply, 0, sizeof(pilot_cmd_t));
   reply.target = target_base;
-  reply.type = rpcp_cmd_type_test_run;
+  reply.type = pilot_cmd_type_test_run;
 
 $if(model.IsTest)$
   /* if it's a test image, conduct the test */
@@ -1598,25 +1598,25 @@ $if(model.IsTest)$
   memset(&result, 0, sizeof(testresult_t));
   bool successful;
   /* run the test */
-  successful = rpcp_test_run(&result);
-  reply.data[(uint8_t)(int)rpcp_test_run_index_result] = successful ? rpcp_test_run_result_success : rpcp_test_run_result_failed;
-  reply.data[(uint8_t)(int)rpcp_test_run_index_failed_count] = (uint8_t)result.count_failed;
-  reply.data[(uint8_t)(int)rpcp_test_run_index_success_count] = (uint8_t)result.count_success;
-  reply.data[(uint8_t)(int)rpcp_test_run_index_total_count] = (uint8_t)result.count_tested;
-  reply.data[(uint8_t)(int)rpcp_test_run_index_failed_low_count] = (uint8_t)result.count_failed_low;
-  reply.data[(uint8_t)(int)rpcp_test_run_index_failed_high_count] = (uint8_t)result.count_failed_high;
-  reply.data[(uint8_t)(int)rpcp_test_run_index_failed_index] = (uint8_t)result.index_failed;
+  successful = pilot_test_run(&result);
+  reply.data[(uint8_t)(int)pilot_test_run_index_result] = successful ? pilot_test_run_result_success : pilot_test_run_result_failed;
+  reply.data[(uint8_t)(int)pilot_test_run_index_failed_count] = (uint8_t)result.count_failed;
+  reply.data[(uint8_t)(int)pilot_test_run_index_success_count] = (uint8_t)result.count_success;
+  reply.data[(uint8_t)(int)pilot_test_run_index_total_count] = (uint8_t)result.count_tested;
+  reply.data[(uint8_t)(int)pilot_test_run_index_failed_low_count] = (uint8_t)result.count_failed_low;
+  reply.data[(uint8_t)(int)pilot_test_run_index_failed_high_count] = (uint8_t)result.count_failed_high;
+  reply.data[(uint8_t)(int)pilot_test_run_index_failed_index] = (uint8_t)result.index_failed;
 $else$
   /* as this is not a test image RETURN an error that this is not supported */
-  reply.data[(uint8_t)(int)rpcp_test_run_index_result] = rpcp_test_run_result_not_supported;
+  reply.data[(uint8_t)(int)pilot_test_run_index_result] = pilot_test_run_result_not_supported;
 $endif$
 
   /* send the reply */
   reply.length = MSG_LEN(8);
-  rpcp_pilot_comm_send_cmd(&reply);
+  pilot_comm_send_cmd(&reply);
 }
 
-static void rpcp_rpi_fpga_state_set(rpcp_cmd_t *cmd)
+static void pilot_rpi_fpga_state_set(pilot_cmd_t *cmd)
 {
   $if(model.FPGAs)$
   module_slot_t slot; module_port_t port;
@@ -1624,50 +1624,50 @@ static void rpcp_rpi_fpga_state_set(rpcp_cmd_t *cmd)
   switch ((int)slot)
   {
     $model.FPGAs:{fpga|
-      case $fpga.Slot$: cmd->data[2] = (uint8_t)rpcp_$fpga.Name$_fpga_gpio_set((int8_t)cmd->data[0], (int8_t)cmd->data[1]); break;
+      case $fpga.Slot$: cmd->data[2] = (uint8_t)pilot_$fpga.Name$_fpga_gpio_set((int8_t)cmd->data[0], (int8_t)cmd->data[1]); break;
     };separator="\n"$
   }
   cmd->length = MSG_LEN(4);
-  rpcp_pilot_comm_send_cmd(cmd);
+  pilot_comm_send_cmd(cmd);
   $endif$
 }
 
-static void rpcp_rpi_fpga_cmd(rpcp_cmd_t *cmd)
+static void pilot_rpi_fpga_cmd(pilot_cmd_t *cmd)
 {
   $if(model.FPGAs)$
   module_slot_t slot; module_port_t port;
   uint32_t size = *((uint16_t *)cmd->data);
 
-  if (size > (rpcp_cmd_t_data_size-2))
-    size = rpcp_cmd_t_data_size-2;
+  if (size > (pilot_cmd_t_data_size-2))
+    size = pilot_cmd_t_data_size-2;
   slot = target_t_get_module_slot(cmd->target);
   switch ((int)slot)
   {
     $model.FPGAs:{fpga|
-      case $fpga.Slot$: rpcp_$fpga.Name$_send(&cmd->data[2], size); break;
+      case $fpga.Slot$: pilot_$fpga.Name$_send(&cmd->data[2], size); break;
     };separator="\n"$
   }
-  rpcp_pilot_comm_send_cmd(cmd);
+  pilot_comm_send_cmd(cmd);
   $endif$
 }
 
-static void rpcp_rpi_comm_stats(rpcp_cmd_t *cmd)
+static void pilot_rpi_comm_stats(pilot_cmd_t *cmd)
 {
   memcpy(cmd->data, &_internals.stats, sizeof(stats_t)); 
   cmd->length = MSG_LEN(sizeof(stats_t));
-  rpcp_pilot_comm_send_cmd(cmd);
+  pilot_comm_send_cmd(cmd);
 }
 
-static void rpcp_rpi_fwinfo_cmd(rpcp_cmd_t *cmd) {
+static void pilot_rpi_fwinfo_cmd(pilot_cmd_t *cmd) {
   cmd->data[0] = $model.Version.BranchValue$;
   cmd->data[1] = $model.Version.Major$;
   cmd->data[2] = $model.Version.Minor$;
   cmd->data[3] = $model.Version.Patch$;
   cmd->length = MSG_LEN(4);
-  rpcp_pilot_comm_send_cmd(cmd);
+  pilot_comm_send_cmd(cmd);
 }
 
-static void rpc_pilot_comm_spi_handle_cmd_complete(rpcp_cmd_t *cmd)
+static void rpc_pilot_comm_spi_handle_cmd_complete(pilot_cmd_t *cmd)
 {
   int baudrate; uint16_t stopbits, parity, wordlength, i;
   module_slot_t slot; module_port_t port;
@@ -1677,203 +1677,203 @@ static void rpc_pilot_comm_spi_handle_cmd_complete(rpcp_cmd_t *cmd)
 
     switch (cmd->type)
     {
-      case rpcp_cmd_type_eeprom_uid_get:
+      case pilot_cmd_type_eeprom_uid_get:
         if (cmd->target == target_base)
-          rpcp_pilot_comm_get_board_uid();
+          pilot_comm_get_board_uid();
         else
-          rpcp_pilot_comm_get_uid(slot);
+          pilot_comm_get_uid(slot);
         break;
 
-      case rpcp_cmd_type_eeprom_hid_get:
-        rpcp_pilot_comm_get_hid(slot);
+      case pilot_cmd_type_eeprom_hid_get:
+        pilot_comm_get_hid(slot);
         break;
 
-      case rpcp_cmd_type_eeprom_hid_set:
-        rpcp_pilot_comm_set_hid(slot, cmd);
+      case pilot_cmd_type_eeprom_hid_set:
+        pilot_comm_set_hid(slot, cmd);
         break;
 
-      case rpcp_cmd_type_eeprom_fid_get:
-        rpcp_pilot_comm_get_fid(slot);
+      case pilot_cmd_type_eeprom_fid_get:
+        pilot_comm_get_fid(slot);
         break;
 
-      case rpcp_cmd_type_eeprom_fid_set:
-        rpcp_pilot_comm_set_fid(slot, cmd);
+      case pilot_cmd_type_eeprom_fid_set:
+        pilot_comm_set_fid(slot, cmd);
         break;
 
-      case rpcp_cmd_type_eeprom_userdata_get:
-        rpcp_pilot_comm_get_eeprom_userdata(slot, cmd);
+      case pilot_cmd_type_eeprom_userdata_get:
+        pilot_comm_get_eeprom_userdata(slot, cmd);
         break;
 
-      case rpcp_cmd_type_eeprom_userdata_set:
-        rpcp_pilot_comm_set_eeprom_userdata(cmd);
+      case pilot_cmd_type_eeprom_userdata_set:
+        pilot_comm_set_eeprom_userdata(cmd);
         break;
 
-      case rpcp_cmd_type_usart_set_baudrate:
-        baudrate = rpc_stm_proto_baudrate_to_int((rpcp_cmd_baudrate_t) cmd->data[0]);
+      case pilot_cmd_type_usart_set_baudrate:
+        baudrate = rpc_stm_proto_baudrate_to_int((pilot_cmd_baudrate_t) cmd->data[0]);
         rpc_pilot_comm_set_baudrate(slot, port, baudrate);
         break;
 
-      case rpcp_cmd_type_usart_set_stopbits:
-        stopbits = rpc_pilot_comm_spi_get_mc_stopbits((rpcp_cmd_stopbits_t) cmd->data[0]);
+      case pilot_cmd_type_usart_set_stopbits:
+        stopbits = rpc_pilot_comm_spi_get_mc_stopbits((pilot_cmd_stopbits_t) cmd->data[0]);
         rpc_pilot_comm_set_stopbits(slot, port, stopbits);
         break;
 
-      case rpcp_cmd_type_usart_set_parity:
-        parity = rpc_pilot_comm_spi_get_mc_parity((rpcp_cmd_parity_t) cmd->data[0]);
+      case pilot_cmd_type_usart_set_parity:
+        parity = rpc_pilot_comm_spi_get_mc_parity((pilot_cmd_parity_t) cmd->data[0]);
         rpc_pilot_comm_set_parity(slot, port, parity);
         break;
 
-      case rpcp_cmd_type_usart_set_wordlength:
-        wordlength = rpc_pilot_comm_spi_get_mc_wordlength((rpcp_cmd_wordlength_t) cmd->data[0]);
+      case pilot_cmd_type_usart_set_wordlength:
+        wordlength = rpc_pilot_comm_spi_get_mc_wordlength((pilot_cmd_wordlength_t) cmd->data[0]);
         rpc_pilot_comm_set_wordlength(slot, port, wordlength);
         break;
 
-      case rpcp_cmd_type_input_get_input:
-        rpc_pilot_comm_send_input_state(slot, cmd->data[(int)rpcp_input_index_target]);
+      case pilot_cmd_type_input_get_input:
+        rpc_pilot_comm_send_input_state(slot, cmd->data[(int)pilot_input_index_target]);
         break;
 
-      case rpcp_cmd_type_output_set_value:
-        rpc_pilot_comm_set_output(slot, (rpcp_output_target_t) cmd->data[(int)rpcp_output_index_target], *((uint32_t *)&cmd->data[(int)rpcp_output_index_value]));
+      case pilot_cmd_type_output_set_value:
+        rpc_pilot_comm_set_output(slot, (pilot_output_target_t) cmd->data[(int)pilot_output_index_target], *((uint32_t *)&cmd->data[(int)pilot_output_index_value]));
         break;
 
       /* rpi requests the rtc time, send it an answer */
-      case rpcp_cmd_type_rtc_get:
+      case pilot_cmd_type_rtc_get:
         rpc_pilot_comm_send_rtc();
         break;
 
       /* rpi sends rtc datetime, update rtc */
-      case rpcp_cmd_type_rtc_set:
+      case pilot_cmd_type_rtc_set:
         rtc_set_datetime_cmd(cmd);
         break;
 
       /* rpi requests counter values, send it an answer*/
-      case rpcp_cmd_type_input_get_counter:
-        rpc_pilot_comm_get_counter_values(slot, (rpcp_counter_target_t)cmd->data[rpcp_counter_index_target]);
+      case pilot_cmd_type_input_get_counter:
+        rpc_pilot_comm_get_counter_values(slot, (pilot_counter_target_t)cmd->data[pilot_counter_index_target]);
         break;
 
       /* rpi sets the counter */
-      case rpcp_cmd_type_input_set_counter:
-        rpcp_counter8_set_counter(cmd);
+      case pilot_cmd_type_input_set_counter:
+        pilot_counter8_set_counter(cmd);
         break;
 
       /* rpi enables / disables the gps */
-      case rpcp_cmd_type_gps_set_enable:
-        rpc_rpi_gps_set_enable(slot, cmd->data[rpcp_gps_enable_index_value]);
+      case pilot_cmd_type_gps_set_enable:
+        rpc_rpi_gps_set_enable(slot, cmd->data[pilot_gps_enable_index_value]);
         break;
 
       /* rpi request gps enabled state */
-      case rpcp_cmd_type_gps_get_enable:
+      case pilot_cmd_type_gps_get_enable:
         rpc_rpi_gps_get_enable(slot);
         break;
 
       /* rpi enables / disables the gsm */
-      case rpcp_cmd_type_gsm_set_enable:
-        rpcp_rpi_gsm_set_enable(slot, cmd->data[rpcp_gsm_enable_index_value]);
+      case pilot_cmd_type_gsm_set_enable:
+        pilot_rpi_gsm_set_enable(slot, cmd->data[pilot_gsm_enable_index_value]);
         break;
 
       /* rpi requests the gsm enabled state */
-      case rpcp_cmd_type_gsm_get_enable:
-        rpcp_rpi_gsm_get_enable(slot);
+      case pilot_cmd_type_gsm_get_enable:
+        pilot_rpi_gsm_get_enable(slot);
         break;
 
       /* rpi enables / disables 1-wire */
-      case rpcp_cmd_type_onewire_set_enable:
-        rpc_rpi_onewire_set_enable(slot, cmd->data[rpcp_onewire_enable_index_value]);
+      case pilot_cmd_type_onewire_set_enable:
+        rpc_rpi_onewire_set_enable(slot, cmd->data[pilot_onewire_enable_index_value]);
         break;
 
       /* rpi requests onewire enabled state */
-      case rpcp_cmd_type_onewire_get_enable:
+      case pilot_cmd_type_onewire_get_enable:
         rpc_rpi_onewire_get_enable(slot);
         break;
 
       /* rpi sends scld update */
-      case rpcp_cmd_type_slcd_udpate:
-        rpcp_rpi_slcd_update(slot);
+      case pilot_cmd_type_slcd_udpate:
+        pilot_rpi_slcd_update(slot);
         break;
 
-      case rpcp_cmd_type_slcd_set_resolution:
-        rpcp_rpi_slcd_set_resolution(slot, cmd);
+      case pilot_cmd_type_slcd_set_resolution:
+        pilot_rpi_slcd_set_resolution(slot, cmd);
         break;
 
-      case rpcp_cmd_type_slcd_get_resolution:
-        rpcp_rpi_slcd_get_resolution(slot);
+      case pilot_cmd_type_slcd_get_resolution:
+        pilot_rpi_slcd_get_resolution(slot);
         break;
 
-      case rpcp_cmd_type_plc_state_get:
-        rpcp_rpi_plc_state_get();
+      case pilot_cmd_type_plc_state_get:
+        pilot_rpi_plc_state_get();
         break;
 
-      case rpcp_cmd_type_plc_state_set:
-        rpcp_rpi_plc_state_set(cmd);
+      case pilot_cmd_type_plc_state_set:
+        pilot_rpi_plc_state_set(cmd);
         break;
 
-      case rpcp_cmd_type_plc_cycletimes_get:
-        rpcp_rpi_plc_cycletimes_get();
+      case pilot_cmd_type_plc_cycletimes_get:
+        pilot_rpi_plc_cycletimes_get();
         break;
 
-      case rpcp_cmd_type_plc_variables_read_config:
-        rpcp_rpi_plc_variables_read_config(cmd);
+      case pilot_cmd_type_plc_variables_read_config:
+        pilot_rpi_plc_variables_read_config(cmd);
         break;
 
-      case rpcp_cmd_type_plc_variables_write_config:
-        rpcp_rpi_plc_variables_write_config(cmd);
+      case pilot_cmd_type_plc_variables_write_config:
+        pilot_rpi_plc_variables_write_config(cmd);
         break;
 
-      case rpcp_cmd_type_plc_variables_get:
-        rpcp_rpi_plc_variables_get();
+      case pilot_cmd_type_plc_variables_get:
+        pilot_rpi_plc_variables_get();
         break;
 
-      case rpcp_cmd_type_plc_variables_set:
-        rpcp_rpi_plc_variables_set(cmd);
+      case pilot_cmd_type_plc_variables_set:
+        pilot_rpi_plc_variables_set(cmd);
         break;
 
-      case rpcp_cmd_type_io16_set_direction:
+      case pilot_cmd_type_io16_set_direction:
         rpc_rpi_io16_set_direction(slot, 
-          (rpcp_io16_block_t)cmd->data[(int)rpcp_io16_set_direction_index_block],
-          (rpcp_io16_direction_t)cmd->data[(int)rpcp_io16_set_direction_index_direction]);
+          (pilot_io16_block_t)cmd->data[(int)pilot_io16_set_direction_index_block],
+          (pilot_io16_direction_t)cmd->data[(int)pilot_io16_set_direction_index_direction]);
         break;
 
       /* rpi requests the module type */
-      case rpcp_cmd_type_module_type_get:
-        rpcp_pilot_comm_get_module_type(slot);
+      case pilot_cmd_type_module_type_get:
+        pilot_comm_get_module_type(slot);
         break;
 
       /* rpi enables / disables lora */
-      case rpcp_cmd_type_lora_set_enable:
-        rpc_rpi_lora_set_enable(slot, cmd->data[rpcp_lora_enable_index_value]);
+      case pilot_cmd_type_lora_set_enable:
+        rpc_rpi_lora_set_enable(slot, cmd->data[pilot_lora_enable_index_value]);
         break;
 
       /* rpi request lora enabled state */
-      case rpcp_cmd_type_lora_get_enable:
+      case pilot_cmd_type_lora_get_enable:
         rpc_rpi_lora_get_enable(slot);
         break;
 
-      case rpcp_cmd_type_test_run:
-        rpcp_pilot_comm_run_test(cmd);
+      case pilot_cmd_type_test_run:
+        pilot_comm_run_test(cmd);
         break;
 
-      case rpcp_cmd_type_plc_variable_get:
-        rpcp_rpi_plc_variable_get(cmd);
+      case pilot_cmd_type_plc_variable_get:
+        pilot_rpi_plc_variable_get(cmd);
         break;
 
-      case rpcp_cmd_type_plc_variable_set:
-        rpcp_rpi_plc_variable_set(cmd);
+      case pilot_cmd_type_plc_variable_set:
+        pilot_rpi_plc_variable_set(cmd);
       break;
 
-      case rpcp_cmd_type_fpga_state:
-      rpcp_rpi_fpga_state_set(cmd);
+      case pilot_cmd_type_fpga_state:
+      pilot_rpi_fpga_state_set(cmd);
       break;
 
-      case rpcp_cmd_type_fpga_cmd:
-      rpcp_rpi_fpga_cmd(cmd);
+      case pilot_cmd_type_fpga_cmd:
+      pilot_rpi_fpga_cmd(cmd);
       break;
 
-      case rpcp_cmd_type_comm_stats_get:
-      rpcp_rpi_comm_stats(cmd);
+      case pilot_cmd_type_comm_stats_get:
+      pilot_rpi_comm_stats(cmd);
       break;
 
-      case rpcp_cmd_type_fwinfo:
-      rpcp_rpi_fwinfo_cmd(cmd);
+      case pilot_cmd_type_fwinfo:
+      pilot_rpi_fwinfo_cmd(cmd);
       break;
       default: break;
     }

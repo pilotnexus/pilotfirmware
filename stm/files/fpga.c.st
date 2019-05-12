@@ -5,7 +5,7 @@
 
 $model.FPGAs:{fpga|
 
-static void rpcp_$fpga.Name$_init_exti()
+static void pilot_$fpga.Name$_init_exti()
 {
   EXTI_InitTypeDef exti;
 
@@ -25,7 +25,7 @@ static void rpcp_$fpga.Name$_init_exti()
 
 \}
 
-static void rpcp_$fpga.Name$_init_nvic()
+static void pilot_$fpga.Name$_init_nvic()
 {
   /* enable and set EXTI Line Interrupt */
   NVIC_InitTypeDef nvic;
@@ -36,7 +36,7 @@ static void rpcp_$fpga.Name$_init_nvic()
   NVIC_Init(&nvic);
 \}
 
-static void rpcp_$fpga.Name$_init_gpio()
+static void pilot_$fpga.Name$_init_gpio()
 {
   GPIO_InitTypeDef gpio;
 
@@ -59,17 +59,17 @@ static void rpcp_$fpga.Name$_init_gpio()
 
 \}
 
-void rpcp_$fpga.Name$_init()
+void pilot_$fpga.Name$_init()
 {
   GPIO_InitTypeDef gpio;
   gpio.GPIO_Speed = GPIO_Speed_50MHz;
 
   /* configure the interrupt pin */
-  rpcp_$fpga.Name$_init_gpio();
+  pilot_$fpga.Name$_init_gpio();
 
   /* configure the interrupt on the stm for the fpga module */
-  rpcp_$fpga.Name$_init_exti();
-  rpcp_$fpga.Name$_init_nvic();
+  pilot_$fpga.Name$_init_exti();
+  pilot_$fpga.Name$_init_nvic();
 
   /* pull the chip select high to disable transfer */
   GPIO_WriteBit($fpga.SPI.NssPin.GPIO$, $fpga.SPI.NssPin.Pin$, Bit_SET);
@@ -99,45 +99,45 @@ void rpcp_$fpga.Name$_init()
   GPIO_Init($fpga.CDONE.GPIO$, &gpio);
 
   //test only
-  //rpcp_$fpga.Name$_read_flash_id();
+  //pilot_$fpga.Name$_read_flash_id();
 \}
 
-void rpcp_$fpga.Name$_send_char(module_port_t port, uint16_t c)
+void pilot_$fpga.Name$_send_char(module_port_t port, uint16_t c)
 {
   char res;
 
   //TODO: OPTIMIZE
-  if (rpcp_spi_set_cs(spi_id_$fpga.SPI.Id$, chip_select_enable))
+  if (pilot_spi_set_cs(spi_id_$fpga.SPI.Id$, chip_select_enable))
   {
-    res = rpcp_spi_dataexchange(spi_id_$fpga.SPI.Id$, c & 0xFF);
+    res = pilot_spi_dataexchange(spi_id_$fpga.SPI.Id$, c & 0xFF);
     if (port == module_port_2)
-      rpcp_pilot_comm_send( target_t_from_module_slot_and_port((module_slot_t)$fpga.Slot$, module_port_2), &res, 1);
+      pilot_comm_send( target_t_from_module_slot_and_port((module_slot_t)$fpga.Slot$, module_port_2), &res, 1);
   \}
 
   if (c & 0x8000)
-    rpcp_spi_set_cs(spi_id_$fpga.SPI.Id$, chip_select_disable);
+    pilot_spi_set_cs(spi_id_$fpga.SPI.Id$, chip_select_disable);
 \}
 
-void rpcp_$fpga.Name$_send(uint8_t *buffer, int length)
+void pilot_$fpga.Name$_send(uint8_t *buffer, int length)
 {
   int i;
-  if (rpcp_spi_set_cs(spi_id_$fpga.SPI.Id$, chip_select_enable))
+  if (pilot_spi_set_cs(spi_id_$fpga.SPI.Id$, chip_select_enable))
   {
     for (i=0; i < length; i++)
     {
-      buffer[i] = rpcp_spi_dataexchange(spi_id_$fpga.SPI.Id$, buffer[i]);
+      buffer[i] = pilot_spi_dataexchange(spi_id_$fpga.SPI.Id$, buffer[i]);
     \}
-    rpcp_spi_set_cs(spi_id_$fpga.SPI.Id$, chip_select_disable);
+    pilot_spi_set_cs(spi_id_$fpga.SPI.Id$, chip_select_disable);
   \}
 \}
 
-uint8_t rpcp_$fpga.Name$_fpga_gpio_set(int8_t chipselect, int8_t reset)
+uint8_t pilot_$fpga.Name$_fpga_gpio_set(int8_t chipselect, int8_t reset)
 {
   if (reset != -1)
     GPIO_WriteBit($fpga.CRESET.GPIO$, $fpga.CRESET.Pin$, reset == 0 ? Bit_RESET : Bit_SET);
 
   if (chipselect != -1)
-    rpcp_spi_set_cs(spi_id_$fpga.SPI.Id$, chipselect == 0 ? chip_select_enable : chip_select_disable);
+    pilot_spi_set_cs(spi_id_$fpga.SPI.Id$, chipselect == 0 ? chip_select_enable : chip_select_disable);
 
   return GPIO_ReadInputDataBit($fpga.CDONE.GPIO$, $fpga.CDONE.Pin$);
 \}

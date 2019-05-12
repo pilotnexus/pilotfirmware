@@ -1,5 +1,5 @@
-#ifndef __RPCP_TEST__
-#define __RPCP_TEST__
+#ifndef __pilot_TEST__
+#define __pilot_TEST__
 
 $if(model.IsTest)$
 
@@ -16,8 +16,8 @@ typedef struct {
   bool success;   /* true if the test was successful */
 } testresult_t;
 
-void rpcp_test_init(void); /* initialize the test modules */
-bool rpcp_test_run(testresult_t *result); /* run the tests */
+void pilot_test_init(void); /* initialize the test modules */
+bool pilot_test_run(testresult_t *result); /* run the tests */
 
 $endif$
 

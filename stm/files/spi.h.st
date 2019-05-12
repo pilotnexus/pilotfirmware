@@ -17,15 +17,15 @@ typedef enum {
 } chip_select_t;
 
 /* one-time setup */
-void rpcp_spi_setup();
+void pilot_spi_setup();
 
 /* set the chip select */
-bool rpcp_spi_set_cs(spi_id_t spi_id, chip_select_t cs);
+bool pilot_spi_set_cs(spi_id_t spi_id, chip_select_t cs);
 
 /* sends data only */
-void rpcp_spi_send(spi_id_t spi_id, uint16_t mosi);
+void pilot_spi_send(spi_id_t spi_id, uint16_t mosi);
 
 /* data exchange returns miso */
-uint16_t rpcp_spi_dataexchange(spi_id_t spi_id, uint16_t mosi);
+uint16_t pilot_spi_dataexchange(spi_id_t spi_id, uint16_t mosi);
 
 #endif
