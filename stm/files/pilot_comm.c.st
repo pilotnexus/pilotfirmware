@@ -603,7 +603,7 @@ static int rpc_stm_proto_baudrate_to_int(pilot_cmd_baudrate_t value)
     default: baudrate = 9600; break;
   }
 
-  RETURN baudrate;
+  return baudrate;
 }
 
 
@@ -617,7 +617,7 @@ static uint16_t rpc_pilot_comm_spi_get_mc_stopbits(pilot_cmd_stopbits_t pilot_st
     case pilot_cmd_stopbits_1: mc_stopbits = USART_StopBits_1; break;
   }
 
-  RETURN mc_stopbits;
+  return mc_stopbits;
 }
 
 static uint16_t rpc_pilot_comm_spi_get_mc_parity(pilot_cmd_parity_t pilot_parity)
@@ -630,7 +630,7 @@ static uint16_t rpc_pilot_comm_spi_get_mc_parity(pilot_cmd_parity_t pilot_parity
     default:
     case pilot_cmd_parity_none: mc_parity = USART_Parity_No; break;
   }
-  RETURN mc_parity;
+  return mc_parity;
 }
 
 static uint16_t rpc_pilot_comm_spi_get_mc_wordlength(pilot_cmd_wordlength_t pilot_wordlength)
@@ -642,7 +642,7 @@ static uint16_t rpc_pilot_comm_spi_get_mc_wordlength(pilot_cmd_wordlength_t pilo
     case pilot_cmd_wordlength_8: mc_databits = USART_WordLength_8b; break;
     case pilot_cmd_wordlength_9: mc_databits = USART_WordLength_9b; break;
   }
-  RETURN mc_databits;
+  return mc_databits;
 }
 
 void rpc_pilot_comm_set_baudrate(module_slot_t slot, module_port_t port, int baudrate)
@@ -844,7 +844,7 @@ $if(model.LORAs)$
 $model.LORAs:{lora|
     case $lora.Slot$: enabled = rpc_$lora.Name$_get_enable(); break;
 };separator="\n"$
-    default: RETURN;
+    default: return;
   }
 
   /* create and send the answer */
@@ -880,7 +880,7 @@ $if(model.GPSs)$
 $model.GPSs:{gps|
     case $gps.Slot$: enabled = rpc_$gps.Name$_get_enable(); break;
 };separator="\n"$
-    default: RETURN;
+    default: return;
   }
 
   /* create and send the answer */
@@ -893,7 +893,7 @@ $model.GPSs:{gps|
 $endif$
 }
 
-static void pilot_rpi_gsm_set_enable(module_slot_t slot, int enable)
+static void pilot_gsm_set_enable(module_slot_t slot, int enable)
 {
 $model.GSMs:{gsm|
 if (slot == $gsm.Slot$)
@@ -901,7 +901,7 @@ if (slot == $gsm.Slot$)
 }; separator = "\n"$
 }
 
-static void pilot_rpi_gsm_get_enable(module_slot_t slot)
+static void pilot_gsm_get_enable(module_slot_t slot)
 {
 $if(model.GSMs)$
   pilot_cmd_t cmd;
@@ -913,7 +913,7 @@ $if(model.GSMs)$
 $model.GSMs:{gsm |
   case $gsm.Slot$: enabled = pilot_$gsm.Name$_get_enable(); break;
 }; separator = "\n"$
-    default: RETURN;
+    default: return;
   }
 
   /* create and the answer */
@@ -946,7 +946,7 @@ $if(model.OneWires)$
 $model.OneWires:{ow|
     case $ow.Slot$: enabled = rpc_$ow.Name$_get_enable(); break;
 };separator="\n"$
-    default: RETURN;
+    default: return;
   }
 
   /* create and send the answer */
@@ -959,7 +959,7 @@ $model.OneWires:{ow|
 $endif$
 }
 
-static void pilot_rpi_slcd_update(module_slot_t slot)
+static void pilot_slcd_update(module_slot_t slot)
 {
 $if(model.SLCDs)$
   switch ((int)slot)
@@ -971,7 +971,7 @@ $model.SLCDs:{slcd|
 $endif$
 }
 
-static void pilot_rpi_slcd_get_resolution(module_slot_t slot)
+static void pilot_slcd_get_resolution(module_slot_t slot)
 {
 $if(model.SLCDs)$
 
@@ -1002,7 +1002,7 @@ $model.SLCDs:{slcd|
 $endif$
 }
 
-static void pilot_rpi_slcd_set_resolution(module_slot_t slot, pilot_cmd_t *cmd)
+static void pilot_slcd_set_resolution(module_slot_t slot, pilot_cmd_t *cmd)
 {
 $if(model.SLCDs)$
   slcd_resolution_t resolution;
@@ -1250,7 +1250,7 @@ $if(model.PLC)$
   extern unsigned long long __tick;
 $endif$
 
-static void pilot_rpi_plc_state_get()
+static void pilot_plc_state_get()
 {
 $if(model.PLC)$
   pilot_cmd_t cmd;
@@ -1263,14 +1263,14 @@ $if(model.PLC)$
 $endif$
 }
 
-static void pilot_rpi_plc_state_set(pilot_cmd_t *cmd)
+static void pilot_plc_state_set(pilot_cmd_t *cmd)
 {
 $if(model.PLC)$
   plc_state = (int)cmd->data[(int)pilot_plc_state_index];
 $endif$
 }
 
-static void pilot_rpi_plc_cycletimes_get()
+static void pilot_plc_cycletimes_get()
 {
 $if(model.PLC)$
   int i;
@@ -1316,7 +1316,7 @@ $if(model.PLC)$
 $endif$
 }
 
-static void pilot_rpi_plc_variables_read_config(pilot_cmd_t *cmd)
+static void pilot_plc_variables_read_config(pilot_cmd_t *cmd)
 {
 $if(model.PLC)$
   /* prepare to receive the variables numbers */
@@ -1326,7 +1326,7 @@ $if(model.PLC)$
 $endif$
 }
 
-static void pilot_rpi_plc_variables_read_config_reply(int successful)
+static void pilot_plc_variables_read_config_reply(int successful)
 {
 $if(model.PLC)$
   pilot_cmd_t cmd;
@@ -1369,14 +1369,14 @@ $if(model.PLC)$
         _internals.plc.read_values.size = configure_plc_read_variables(cfg->numbers, cfg->count);
 
         /* send a variables config reply to signal that the configuration is complete */
-        pilot_rpi_plc_variables_read_config_reply(_internals.plc.read_values.size <= MAX_PLC_VARS_SIZE);
+        pilot_plc_variables_read_config_reply(_internals.plc.read_values.size <= MAX_PLC_VARS_SIZE);
       }
     }
   }
 $endif$
 }
 
-static void pilot_rpi_plc_variables_write_config(pilot_cmd_t *cmd)
+static void pilot_plc_variables_write_config(pilot_cmd_t *cmd)
 {
 $if(model.PLC)$
   /* prepare to receive the variable numbers */
@@ -1386,7 +1386,7 @@ $if(model.PLC)$
 $endif$
 }
 
-static void pilot_rpi_plc_variables_write_config_reply(int successful)
+static void pilot_plc_variables_write_config_reply(int successful)
 {
 $if(model.PLC)$
   pilot_cmd_t cmd;
@@ -1427,13 +1427,13 @@ static void pilot_comm_handle_plc_writeconfig(pilot_plc_vars_config_t *cfg, char
         configure_plc_write_variables(cfg->numbers, cfg->count);
 
         /* send a variables config reply to signal that the configuration is complete */
-        pilot_rpi_plc_variables_write_config_reply(1);
+        pilot_plc_variables_write_config_reply(1);
       }
     }
   }
 }
 
-static void pilot_rpi_plc_variables_write_values_reply()
+static void pilot_plc_variables_write_values_reply()
 {
   pilot_cmd_t cmd;
   /* setup the cmd */
@@ -1461,7 +1461,7 @@ static void pilot_comm_handle_plc_writevalues(pilot_plc_vars_write_values_t *val
       write_plc_variables(val->buffer, val->count);
 
       /* send a variables value set reply to signal that the values setting is complete */
-      pilot_rpi_plc_variables_write_values_reply();
+      pilot_plc_variables_write_values_reply();
     }
   }
 }
@@ -1507,7 +1507,7 @@ static void pilot_comm_handle_plc_writedata(char data)
   $endif$
 }
 
-static void pilot_rpi_plc_variables_get_reply(int size)
+static void pilot_plc_variables_get_reply(int size)
 {
 $if(model.PLC)$
   int i;
@@ -1528,7 +1528,7 @@ $endif$
 }
 
 /* is called when the plc variables get cmd is received */
-static void pilot_rpi_plc_variables_get()
+static void pilot_plc_variables_get()
 {
   $if(model.PLC)$
   int actual_size;
@@ -1541,7 +1541,7 @@ static void pilot_rpi_plc_variables_get()
     actual_size = read_plc_variables(_internals.plc.read_values.buffer);
 
     /* send the variables get reply */
-    pilot_rpi_plc_variables_get_reply(actual_size);
+    pilot_plc_variables_get_reply(actual_size);
 
     /* send the variable values back as a stream */
     pilot_comm_send(target_plc_read, _internals.plc.read_values.buffer, actual_size);
@@ -1551,7 +1551,7 @@ $endif$
 }
 
 /* is called when the plc variable get cmd is received */
-static void pilot_rpi_plc_variable_get(pilot_cmd_t * cmd)
+static void pilot_plc_variable_get(pilot_cmd_t * cmd)
 {
 $if(model.PLC)$
   read_from_plc_variable(*((uint16_t *)&cmd->data[8]), cmd->data, 0);
@@ -1564,7 +1564,7 @@ $endif$
 }
 
 /* is called when the plc variable get cmd is received */
-static void pilot_rpi_plc_variable_set(pilot_cmd_t * cmd)
+static void pilot_plc_variable_set(pilot_cmd_t * cmd)
 {
 $if(model.PLC)$
   write_to_plc_variable(*((uint16_t *)&cmd->data[8]), (uint8_t *)cmd->data, 0);
@@ -1576,7 +1576,7 @@ $endif$
 }
 
 /* is called when the plc variables set cmd is received */
-static void pilot_rpi_plc_variables_set(pilot_cmd_t *cmd)
+static void pilot_plc_variables_set(pilot_cmd_t *cmd)
 {
 $if(model.PLC)$
   /* expect a variables command stream */
@@ -1607,7 +1607,7 @@ $if(model.IsTest)$
   reply.data[(uint8_t)(int)pilot_test_run_index_failed_high_count] = (uint8_t)result.count_failed_high;
   reply.data[(uint8_t)(int)pilot_test_run_index_failed_index] = (uint8_t)result.index_failed;
 $else$
-  /* as this is not a test image RETURN an error that this is not supported */
+  /* as this is not a test image return an error that this is not supported */
   reply.data[(uint8_t)(int)pilot_test_run_index_result] = pilot_test_run_result_not_supported;
 $endif$
 
@@ -1616,7 +1616,7 @@ $endif$
   pilot_comm_send_cmd(&reply);
 }
 
-static void pilot_rpi_fpga_state_set(pilot_cmd_t *cmd)
+static void pilot_fpga_state_set(pilot_cmd_t *cmd)
 {
   $if(model.FPGAs)$
   module_slot_t slot; module_port_t port;
@@ -1632,7 +1632,7 @@ static void pilot_rpi_fpga_state_set(pilot_cmd_t *cmd)
   $endif$
 }
 
-static void pilot_rpi_fpga_cmd(pilot_cmd_t *cmd)
+static void pilot_fpga_cmd(pilot_cmd_t *cmd)
 {
   $if(model.FPGAs)$
   module_slot_t slot; module_port_t port;
@@ -1651,19 +1651,17 @@ static void pilot_rpi_fpga_cmd(pilot_cmd_t *cmd)
   $endif$
 }
 
-static void pilot_rpi_comm_stats(pilot_cmd_t *cmd)
+static void pilot_comm_stats(pilot_cmd_t *cmd)
 {
   memcpy(cmd->data, &_internals.stats, sizeof(stats_t)); 
   cmd->length = MSG_LEN(sizeof(stats_t));
   pilot_comm_send_cmd(cmd);
 }
 
-static void pilot_rpi_fwinfo_cmd(pilot_cmd_t *cmd) {
-  cmd->data[0] = $model.Version.BranchValue$;
-  cmd->data[1] = $model.Version.Major$;
-  cmd->data[2] = $model.Version.Minor$;
-  cmd->data[3] = $model.Version.Patch$;
-  cmd->length = MSG_LEN(4);
+static void pilot_fwinfo_cmd(pilot_cmd_t *cmd) {
+  const char *version = "$model.Version$";
+  memcpy(cmd->data, version, strlen(version)+1);
+  cmd->length = MSG_LEN(44);
   pilot_comm_send_cmd(cmd);
 }
 
@@ -1768,12 +1766,12 @@ static void rpc_pilot_comm_spi_handle_cmd_complete(pilot_cmd_t *cmd)
 
       /* rpi enables / disables the gsm */
       case pilot_cmd_type_gsm_set_enable:
-        pilot_rpi_gsm_set_enable(slot, cmd->data[pilot_gsm_enable_index_value]);
+        pilot_gsm_set_enable(slot, cmd->data[pilot_gsm_enable_index_value]);
         break;
 
       /* rpi requests the gsm enabled state */
       case pilot_cmd_type_gsm_get_enable:
-        pilot_rpi_gsm_get_enable(slot);
+        pilot_gsm_get_enable(slot);
         break;
 
       /* rpi enables / disables 1-wire */
@@ -1788,43 +1786,43 @@ static void rpc_pilot_comm_spi_handle_cmd_complete(pilot_cmd_t *cmd)
 
       /* rpi sends scld update */
       case pilot_cmd_type_slcd_udpate:
-        pilot_rpi_slcd_update(slot);
+        pilot_slcd_update(slot);
         break;
 
       case pilot_cmd_type_slcd_set_resolution:
-        pilot_rpi_slcd_set_resolution(slot, cmd);
+        pilot_slcd_set_resolution(slot, cmd);
         break;
 
       case pilot_cmd_type_slcd_get_resolution:
-        pilot_rpi_slcd_get_resolution(slot);
+        pilot_slcd_get_resolution(slot);
         break;
 
       case pilot_cmd_type_plc_state_get:
-        pilot_rpi_plc_state_get();
+        pilot_plc_state_get();
         break;
 
       case pilot_cmd_type_plc_state_set:
-        pilot_rpi_plc_state_set(cmd);
+        pilot_plc_state_set(cmd);
         break;
 
       case pilot_cmd_type_plc_cycletimes_get:
-        pilot_rpi_plc_cycletimes_get();
+        pilot_plc_cycletimes_get();
         break;
 
       case pilot_cmd_type_plc_variables_read_config:
-        pilot_rpi_plc_variables_read_config(cmd);
+        pilot_plc_variables_read_config(cmd);
         break;
 
       case pilot_cmd_type_plc_variables_write_config:
-        pilot_rpi_plc_variables_write_config(cmd);
+        pilot_plc_variables_write_config(cmd);
         break;
 
       case pilot_cmd_type_plc_variables_get:
-        pilot_rpi_plc_variables_get();
+        pilot_plc_variables_get();
         break;
 
       case pilot_cmd_type_plc_variables_set:
-        pilot_rpi_plc_variables_set(cmd);
+        pilot_plc_variables_set(cmd);
         break;
 
       case pilot_cmd_type_io16_set_direction:
@@ -1853,27 +1851,27 @@ static void rpc_pilot_comm_spi_handle_cmd_complete(pilot_cmd_t *cmd)
         break;
 
       case pilot_cmd_type_plc_variable_get:
-        pilot_rpi_plc_variable_get(cmd);
+        pilot_plc_variable_get(cmd);
         break;
 
       case pilot_cmd_type_plc_variable_set:
-        pilot_rpi_plc_variable_set(cmd);
+        pilot_plc_variable_set(cmd);
       break;
 
       case pilot_cmd_type_fpga_state:
-      pilot_rpi_fpga_state_set(cmd);
+      pilot_fpga_state_set(cmd);
       break;
 
       case pilot_cmd_type_fpga_cmd:
-      pilot_rpi_fpga_cmd(cmd);
+      pilot_fpga_cmd(cmd);
       break;
 
       case pilot_cmd_type_comm_stats_get:
-      pilot_rpi_comm_stats(cmd);
+      pilot_comm_stats(cmd);
       break;
 
       case pilot_cmd_type_fwinfo:
-      pilot_rpi_fwinfo_cmd(cmd);
+      pilot_fwinfo_cmd(cmd);
       break;
       default: break;
     }

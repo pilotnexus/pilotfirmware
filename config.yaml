@@ -1,5 +1,0 @@
-name: main
-version: 1.0.0-beta
-targethardware: PMB001
-dependencies:
-  - "pilotbuild": "^1.0.0"
