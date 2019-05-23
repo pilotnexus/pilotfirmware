@@ -6,7 +6,7 @@ EXTRAFILES=
 OBJCOPY=arm-none-eabi-objcopy
 CC=arm-none-eabi-gcc
 CCFLAGS=-mcpu=cortex-m3 -mthumb -std=c99 -DUSE_STDPERIPH_DRIVER -nostartfiles -g -O$(DEBUG_LEVEL) -Wl,-Tstm32.ld -I"." -I"inc" 
-SRCS=$(wildcard *.c)
+SRCS=$(filter-out $(EXCLUDE_SRCS), $(wildcard *.c))
 SSRCS=$(wildcard *.s)
 DEPS=$(wildcard *.h)
 RUST_SRCS := $(wildcard $(SRC_DIR)/*.rs)
