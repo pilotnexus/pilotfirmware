@@ -14,7 +14,7 @@
 #define MODULE_PORT_COUNT 2
 
 /* command message payload calc macro */
-#define MSG_LEN(x) (0x7F & (x >> 2))
+#define MSG_LEN(x) (0x7F & ((x + 4 - 1)/ 4))
 
 /* we're using byte-wise SPI communication */
 typedef uint8_t spidata_t;

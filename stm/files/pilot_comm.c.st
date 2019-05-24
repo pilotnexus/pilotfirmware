@@ -603,7 +603,7 @@ static int rpc_stm_proto_baudrate_to_int(pilot_cmd_baudrate_t value)
     default: baudrate = 9600; break;
   }
 
-  RETURN baudrate;
+  return baudrate;
 }
 
 
@@ -617,7 +617,7 @@ static uint16_t rpc_pilot_comm_spi_get_mc_stopbits(pilot_cmd_stopbits_t pilot_st
     case pilot_cmd_stopbits_1: mc_stopbits = USART_StopBits_1; break;
   }
 
-  RETURN mc_stopbits;
+  return mc_stopbits;
 }
 
 static uint16_t rpc_pilot_comm_spi_get_mc_parity(pilot_cmd_parity_t pilot_parity)
@@ -630,7 +630,7 @@ static uint16_t rpc_pilot_comm_spi_get_mc_parity(pilot_cmd_parity_t pilot_parity
     default:
     case pilot_cmd_parity_none: mc_parity = USART_Parity_No; break;
   }
-  RETURN mc_parity;
+  return mc_parity;
 }
 
 static uint16_t rpc_pilot_comm_spi_get_mc_wordlength(pilot_cmd_wordlength_t pilot_wordlength)
@@ -642,7 +642,7 @@ static uint16_t rpc_pilot_comm_spi_get_mc_wordlength(pilot_cmd_wordlength_t pilo
     case pilot_cmd_wordlength_8: mc_databits = USART_WordLength_8b; break;
     case pilot_cmd_wordlength_9: mc_databits = USART_WordLength_9b; break;
   }
-  RETURN mc_databits;
+  return mc_databits;
 }
 
 void rpc_pilot_comm_set_baudrate(module_slot_t slot, module_port_t port, int baudrate)
@@ -844,7 +844,7 @@ $if(model.LORAs)$
 $model.LORAs:{lora|
     case $lora.Slot$: enabled = rpc_$lora.Name$_get_enable(); break;
 };separator="\n"$
-    default: RETURN;
+    default: return;
   }
 
   /* create and send the answer */
@@ -880,7 +880,7 @@ $if(model.GPSs)$
 $model.GPSs:{gps|
     case $gps.Slot$: enabled = rpc_$gps.Name$_get_enable(); break;
 };separator="\n"$
-    default: RETURN;
+    default: return;
   }
 
   /* create and send the answer */
@@ -913,7 +913,7 @@ $if(model.GSMs)$
 $model.GSMs:{gsm |
   case $gsm.Slot$: enabled = pilot_$gsm.Name$_get_enable(); break;
 }; separator = "\n"$
-    default: RETURN;
+    default: return;
   }
 
   /* create and the answer */
@@ -946,7 +946,7 @@ $if(model.OneWires)$
 $model.OneWires:{ow|
     case $ow.Slot$: enabled = rpc_$ow.Name$_get_enable(); break;
 };separator="\n"$
-    default: RETURN;
+    default: return;
   }
 
   /* create and send the answer */
@@ -1607,7 +1607,7 @@ $if(model.IsTest)$
   reply.data[(uint8_t)(int)pilot_test_run_index_failed_high_count] = (uint8_t)result.count_failed_high;
   reply.data[(uint8_t)(int)pilot_test_run_index_failed_index] = (uint8_t)result.index_failed;
 $else$
-  /* as this is not a test image RETURN an error that this is not supported */
+  /* as this is not a test image return an error that this is not supported */
   reply.data[(uint8_t)(int)pilot_test_run_index_result] = pilot_test_run_result_not_supported;
 $endif$
 
@@ -1659,11 +1659,9 @@ static void pilot_rpi_comm_stats(pilot_cmd_t *cmd)
 }
 
 static void pilot_rpi_fwinfo_cmd(pilot_cmd_t *cmd) {
-  cmd->data[0] = $model.Version.BranchValue$;
-  cmd->data[1] = $model.Version.Major$;
-  cmd->data[2] = $model.Version.Minor$;
-  cmd->data[3] = $model.Version.Patch$;
-  cmd->length = MSG_LEN(4);
+  static const char version[] = "$model.Version$";
+  strncpy(cmd->data, version, pilot_cmd_t_data_size);
+  cmd->length = MSG_LEN(sizeof(version));
   pilot_comm_send_cmd(cmd);
 }
 
