@@ -22,12 +22,12 @@ void pilot_comm_spi_tx_done(void);
 void pilot_comm_send(target_t target, char* buffer, int length);
 void pilot_comm_send_cmd(pilot_cmd_t *cmd);
 void pilot_comm_send_input_changed(module_slot_t slot);
-void send_subscribed_plc_variable(int plc_variable_number);
 
-void rpc_pilot_comm_set_baudrate(module_slot_t slot, module_port_t port, int baudrate);
-void rpc_pilot_comm_set_stopbits(module_slot_t slot, module_port_t port, uint16_t stopbits);
-void rpc_pilot_comm_set_parity(module_slot_t slot, module_port_t port, uint16_t parity);
-void rpc_pilot_comm_set_wordlength(module_slot_t slot, module_port_t port, uint16_t wordlength);
-void rpc_pilot_comm_set_baudrate(module_slot_t slot, module_port_t port, int baudrate);
+void pilot_comm_send_subscribed_plc_variable(int plc_variable_number);
+
+void pilot_comm_set_baudrate(module_slot_t slot, module_port_t port, int baudrate);
+void pilot_comm_set_stopbits(module_slot_t slot, module_port_t port, uint16_t stopbits);
+void pilot_comm_set_parity(module_slot_t slot, module_port_t port, uint16_t parity);
+void pilot_comm_set_wordlength(module_slot_t slot, module_port_t port, uint16_t wordlength);
 
 #endif

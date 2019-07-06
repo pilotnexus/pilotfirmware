@@ -10,6 +10,7 @@
 #include "gpio_config.h"
 #include "it_callback.h"
 #include "stm32f10x_exti.h"
+#include "main.h"
 
 #if USB_HIGH_PRIORITY_EVENT > 0
 extern void USB_HIGH_ISR (void);
@@ -115,7 +116,7 @@ void PendSVC(void)
 *******************************************************************************/
 void SysTick_Handler(void)
 {
-  rpc_systick();
+  pilot_systick();
 }
 
 /*******************************************************************************

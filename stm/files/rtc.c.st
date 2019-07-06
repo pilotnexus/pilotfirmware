@@ -313,11 +313,6 @@ static void rtc_configure_init()
 /* initialize the rtc */
 void rtc_init()
 {
-  pilot_usart_send_string("initializing rtc...");
   rtc_configure_init();
-  pilot_usart_send_string("DONE\r\n");
-
-  pilot_usart_send_string("configuring rtc...");
   rtc_configure();
-  pilot_usart_send_string("DONE\r\n");
 }

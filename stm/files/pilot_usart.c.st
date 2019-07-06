@@ -115,7 +115,7 @@ static void pilot_usart_configure_usart()
 }
 
 /* initializes the usart hardwired to the raspberry pi 
-   needs to be called before pilot_usart_send_string() or pilot_usart_send_char() */
+   needs to be called before printf() or _putchar() */
 void pilot_usart_init()
 {
   pilot_usart_configure_clocks();
@@ -126,71 +126,20 @@ void pilot_usart_init()
   pilot_usart_configure_usart();
 }
 
-/* sends the zero terminated string to the raspberry pi 
-   call pilot_usart_init() before calling this function */
-void pilot_usart_send_string(char* msg)
-{
-  int i=0;
-  while (msg[i] != 0)
-  {    
-    USART_SendData(USART1, msg[i++]);
-    while (USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
-  }
-}
-
-/* sends the zero terminated string to the raspberry pi 
-   call pilot_usart_init() before calling this function */
-void pilot_usart_send_formatted_string(const char *format, ...)
-{
-	va_list args;
-	static char buffer[100];
-
-	va_start(args, format);
-	vsnprintf(buffer, sizeof buffer, format, args);
-	va_end(args);
-	pilot_usart_send_string(buffer);
-}
 
 /* sends the character to the raspberry pi 
    call pilot_usart_init() before calling this function */
-void pilot_usart_send_char(char c)
+void _putchar(char c)
 {
   USART_SendData(USART1, c);
   while (USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
 }
 
-void pilot_usart_send_chars(char *c, int length)
+void _putchars(char *c, int length)
 {
   int i;
   for (i = 0; i < length; i++)
-    pilot_usart_send_char(c[i]);
-}
-
-#define digit2hex(num) ((char)((num < 0xA) ? 0x30 + num : 0x41 - 0xA + num))
-
-void pilot_usart_send_byte_as_hex(uint8_t b)
-{
-  uint8_t p1, p2;
-
-  /* first nibble */
-  p1 = (b >> 4) & 0x0F;
-
-  /* second nibble */
-  p2 = b & 0x0F;
-
-  pilot_usart_send_string("0x");
-  pilot_usart_send_char(digit2hex(p1));
-  pilot_usart_send_char(digit2hex(p2));
-}
-
-void pilot_usart_send_bytes_as_hex(uint8_t *b, int32_t length)
-{
-  int i;
-  for (i = 0; i < length; i++)
-  {
-    pilot_usart_send_byte_as_hex(b[i]);
-    pilot_usart_send_char(' ');
-  }
+    _putchar(c[i]);
 }
 
 /* END Rpi functions */

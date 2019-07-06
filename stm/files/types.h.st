@@ -4,8 +4,6 @@
 #include "common_base.h"
 #include "stm.h"
 
-$if(model.PLC)$
-
   #define MAX_PLC_VARS 256
   typedef struct
   {
@@ -38,8 +36,6 @@ $if(model.PLC)$
     pilot_plc_vars_write_values_t write_values;
   } pilot_plc_vars_t;
 
-$endif$
-
 #define RX_BUFFER_SIZE 1024
 #define RX_BUFFER_BYTESIZE RX_BUFFER_SIZE*2
 
@@ -71,11 +67,7 @@ typedef struct {
   int send2rpiqueue_usart_overflow_count;
 
   stats_t stats;
-
-$if(model.PLC)$
   pilot_plc_vars_t plc;
-$endif$
-
 } internals_t;
 
 #endif

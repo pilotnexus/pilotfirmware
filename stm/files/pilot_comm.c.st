@@ -1,9 +1,5 @@
-$if(model.PLC)$
-#include "plc.h"
-$endif$
-
 #include "pilot_comm.h"
-
+#include "plc.h"
 #include "eeprom.h"
 #include "pilot_usart.h"
 #include "stm32f10x_crc.h"
@@ -31,7 +27,6 @@ $endif$
 $if(model.AIO20s)$
 #include "aio20.h"
 $endif$
-
 
 /* holds private members */
 static internals_t _internals = {0};
@@ -580,7 +575,7 @@ void pilot_handle_received_data()
         }
         else
         {
-          pilot_usart_send_formatted_string("Unknown slot %i, port %i\r\n", slot, port);	   
+          printf("Unknown slot %i, port %i\r\n", slot, port);	   
         }
       }
     }
@@ -645,7 +640,7 @@ static uint16_t rpc_pilot_comm_spi_get_mc_wordlength(pilot_cmd_wordlength_t pilo
   return mc_databits;
 }
 
-void rpc_pilot_comm_set_baudrate(module_slot_t slot, module_port_t port, int baudrate)
+void pilot_comm_set_baudrate(module_slot_t slot, module_port_t port, int baudrate)
 {
 $model.Modules:{module|
   if (slot == $module.Slot$) {
@@ -662,7 +657,7 @@ $model.Modules:{module|
 };separator="\n"$
 }
 
-void rpc_pilot_comm_set_stopbits(module_slot_t slot, module_port_t port, uint16_t stopbits)
+void pilot_comm_set_stopbits(module_slot_t slot, module_port_t port, uint16_t stopbits)
 {
 $model.Modules:{module|
   if (slot == $module.Slot$) {
@@ -679,7 +674,7 @@ $model.Modules:{module|
 };separator="\n"$
 }
 
-void rpc_pilot_comm_set_parity(module_slot_t slot, module_port_t port, uint16_t parity)
+void pilot_comm_set_parity(module_slot_t slot, module_port_t port, uint16_t parity)
 {
 $model.Modules:{module|
   if (slot == $module.Slot$) {
@@ -696,7 +691,7 @@ $model.Modules:{module|
 };separator="\n"$
 }
 
-void rpc_pilot_comm_set_wordlength(module_slot_t slot, module_port_t port, uint16_t wordlength)
+void pilot_comm_set_wordlength(module_slot_t slot, module_port_t port, uint16_t wordlength)
 {
 $model.Modules:{module|
   if (slot == $module.Slot$) {
@@ -1236,23 +1231,20 @@ $model.Modules:{m|
   pilot_comm_send_cmd(&cmd);
 }
 
-$if(model.PLC)$
-  /* global plc variables */
-  extern int plc_state;
-  extern unsigned int cycle_tick;
-  extern unsigned int cycle_current;
-  extern unsigned int cycle_min;
-  extern unsigned int cycle_max;
-  extern unsigned int cycle_current_comm; //time until comm done
-  extern unsigned int cycle_current_read; //time until read
-  extern unsigned int cycle_current_program; //time for program
-  extern unsigned int cycle_current_write; //time until write
-  extern unsigned long long __tick;
-$endif$
+/* global plc variables */
+extern int plc_state;
+extern unsigned int cycle_tick;
+extern unsigned int cycle_current;
+extern unsigned int cycle_min;
+extern unsigned int cycle_max;
+extern unsigned int cycle_current_comm; //time until comm done
+extern unsigned int cycle_current_read; //time until read
+extern unsigned int cycle_current_program; //time for program
+extern unsigned int cycle_current_write; //time until write
+extern unsigned long long __tick;
 
 static void pilot_rpi_plc_state_get()
 {
-$if(model.PLC)$
   pilot_cmd_t cmd;
   memset(&cmd, 0, sizeof(pilot_cmd_t));
   cmd.target = target_base;
@@ -1260,30 +1252,26 @@ $if(model.PLC)$
   cmd.data[(int)pilot_plc_state_index] = plc_state;
   cmd.length = MSG_LEN(4);
   pilot_comm_send_cmd(&cmd);
-$endif$
 }
 
 static void pilot_rpi_plc_state_set(pilot_cmd_t *cmd)
 {
-$if(model.PLC)$
   plc_state = (int)cmd->data[(int)pilot_plc_state_index];
-$endif$
 }
 
 static void pilot_rpi_plc_cycletimes_get()
 {
-$if(model.PLC)$
   int i;
   pilot_cmd_t cmd;
   uint16_t min, max, cur, tick, comm, read, program, write;
   /* get the current values */
-  min = (uint16_t) cycle_min / ($model.ClockSpeed$ / 1000000);
-  max = (uint16_t) cycle_max / ($model.ClockSpeed$ / 1000000);
-  cur = (uint16_t) cycle_current / ($model.ClockSpeed$ / 1000000);
-  comm = (uint16_t) cycle_current_comm / ($model.ClockSpeed$ / 1000000);
-  read = (uint16_t) cycle_current_read / ($model.ClockSpeed$ / 1000000);
-  program = (uint16_t) cycle_current_program / ($model.ClockSpeed$ / 1000000);
-  write = (uint16_t) cycle_current_write / ($model.ClockSpeed$ / 1000000);
+  min = (uint16_t) (cycle_min / ($model.ClockSpeed$ / 1000000));
+  max = (uint16_t) (cycle_max / ($model.ClockSpeed$ / 1000000));
+  cur = (uint16_t) (cycle_current / ($model.ClockSpeed$ / 1000000));
+  comm = (uint16_t) (cycle_current_comm / ($model.ClockSpeed$ / 1000000));
+  read = (uint16_t) (cycle_current_read / ($model.ClockSpeed$ / 1000000));
+  program = (uint16_t) (cycle_current_program / ($model.ClockSpeed$ / 1000000));
+  write = (uint16_t) (cycle_current_write / ($model.ClockSpeed$ / 1000000));
   tick = (uint16_t) __tick;
 
   /* create the answer */
@@ -1308,27 +1296,21 @@ $if(model.PLC)$
   for (i = 0; i < sizeof(write); i++)
     cmd.data[(int)pilot_plc_cycletimes_index_write + i] = BYTE_FROM_UINT16(write, i);
 
-
   /* send the answer */
   cmd.length = MSG_LEN(16);
   pilot_comm_send_cmd(&cmd);
-
-$endif$
 }
 
 static void pilot_rpi_plc_variables_read_config(pilot_cmd_t *cmd)
 {
-$if(model.PLC)$
   /* prepare to receive the variables numbers */
   _internals.plc.read_config.expected = INT_FROM_BYTES((cmd->data + (int)pilot_plc_variables_value_index_size));
   _internals.plc.read_config.count = 0;
   _internals.plc.read_config.has_last_char  = 0;
-$endif$
 }
 
 static void pilot_rpi_plc_variables_read_config_reply(int successful)
 {
-$if(model.PLC)$
   pilot_cmd_t cmd;
   memset(&cmd, 0, sizeof(pilot_cmd_t));
   cmd.target = target_base;
@@ -1337,12 +1319,10 @@ $if(model.PLC)$
   cmd.length = MSG_LEN(4);
   
   pilot_comm_send_cmd(&cmd);
-$endif$
 }
 
 static void pilot_comm_handle_plc_readdata(char data)
 {
-$if(model.PLC)$
   uint16_t number;
   pilot_plc_vars_config_t *cfg = &_internals.plc.read_config;
 
@@ -1366,29 +1346,25 @@ $if(model.PLC)$
       if (cfg->count == cfg->expected)
       {
         /* configure plc variables */
-        _internals.plc.read_values.size = configure_plc_read_variables(cfg->numbers, cfg->count);
+        _internals.plc.read_values.size = plc_configure_read_variables(cfg->numbers, cfg->count);
 
         /* send a variables config reply to signal that the configuration is complete */
         pilot_rpi_plc_variables_read_config_reply(_internals.plc.read_values.size <= MAX_PLC_VARS_SIZE);
       }
     }
   }
-$endif$
 }
 
 static void pilot_rpi_plc_variables_write_config(pilot_cmd_t *cmd)
 {
-$if(model.PLC)$
   /* prepare to receive the variable numbers */
   _internals.plc.write_config.expected = INT_FROM_BYTES((cmd->data + (int)pilot_plc_variables_value_index_size));
   _internals.plc.write_config.count = 0;
   _internals.plc.write_config.has_last_char = 0;
-$endif$
 }
 
 static void pilot_rpi_plc_variables_write_config_reply(int successful)
 {
-$if(model.PLC)$
   pilot_cmd_t cmd;
   memset(&cmd, 0, sizeof(pilot_cmd_t));
   cmd.target = target_base;
@@ -1396,10 +1372,8 @@ $if(model.PLC)$
   cmd.data[0] = successful ? 1 : 0;
   cmd.length = MSG_LEN(4);
   pilot_comm_send_cmd(&cmd);
-$endif$
 }
 
-$if(model.PLC)$
 static void pilot_comm_handle_plc_writeconfig(pilot_plc_vars_config_t *cfg, char data)
 {
   uint16_t number;
@@ -1424,7 +1398,7 @@ static void pilot_comm_handle_plc_writeconfig(pilot_plc_vars_config_t *cfg, char
       if (cfg->count == cfg->expected)
       {
         /* configure plc write variables */
-        configure_plc_write_variables(cfg->numbers, cfg->count);
+        plc_configure_write_variables(cfg->numbers, cfg->count);
 
         /* send a variables config reply to signal that the configuration is complete */
         pilot_rpi_plc_variables_write_config_reply(1);
@@ -1458,7 +1432,7 @@ static void pilot_comm_handle_plc_writevalues(pilot_plc_vars_write_values_t *val
     if (val->count == val->expected)
     {
       /* write the variables */
-      write_plc_variables(val->buffer, val->count);
+      plc_write_variables(val->buffer, val->count);
 
       /* send a variables value set reply to signal that the values setting is complete */
       pilot_rpi_plc_variables_write_values_reply();
@@ -1467,7 +1441,7 @@ static void pilot_comm_handle_plc_writevalues(pilot_plc_vars_write_values_t *val
 }
 
 /* is called when a variable subscription event happens */
-void send_subscribed_plc_variable(int plc_variable_number)
+void pilot_comm_send_subscribed_plc_variable(int plc_variable_number)
 {  
   if (plc_variable_number != -1 && _internals.bufferstate != stm_bufferstate_full)
   {
@@ -1477,7 +1451,7 @@ void send_subscribed_plc_variable(int plc_variable_number)
     cmd.target = target_base;
     cmd.type = pilot_cmd_type_plc_variable_get;
  
-    read_from_plc_variable(plc_variable_number, cmd.data, 0);
+    plc_read_from_variable(plc_variable_number, cmd.data, pilot_cmd_t_data_size);
 
     *((uint16_t *)&cmd.data[8]) = plc_variable_number | PLC_VAR_SUBSCRIBE_BIT;
 
@@ -1487,13 +1461,10 @@ void send_subscribed_plc_variable(int plc_variable_number)
   }  
 }
 
-$endif$
-
 /* is called when receiving stream data with target plc write,
    used for the write configuration and the write values */
 static void pilot_comm_handle_plc_writedata(char data)
 {
-  $if(model.PLC)$
   pilot_plc_vars_config_t *cfg = &_internals.plc.write_config;
   pilot_plc_vars_write_values_t *val = &_internals.plc.write_values;
 
@@ -1504,12 +1475,10 @@ static void pilot_comm_handle_plc_writedata(char data)
   else if(val->count < val->expected)
     pilot_comm_handle_plc_writevalues(val, data);
 
-  $endif$
 }
 
 static void pilot_rpi_plc_variables_get_reply(int size)
 {
-$if(model.PLC)$
   int i;
   /* prepare the reply to plc variables get command */
   pilot_cmd_t cmd;
@@ -1524,13 +1493,11 @@ $if(model.PLC)$
   cmd.length = MSG_LEN(8);
   pilot_comm_send_cmd(&cmd);
 
-$endif$
 }
 
 /* is called when the plc variables get cmd is received */
 static void pilot_rpi_plc_variables_get()
 {
-  $if(model.PLC)$
   int actual_size;
   pilot_plc_vars_values_t *values = &_internals.plc.read_values;
 
@@ -1538,7 +1505,7 @@ static void pilot_rpi_plc_variables_get()
   if (values->size > 0 && values->size <= MAX_PLC_VARS_SIZE)
   {
     /* update the values buffer */
-    actual_size = read_plc_variables(_internals.plc.read_values.buffer);
+    actual_size = plc_read_variables(_internals.plc.read_values.buffer);
 
     /* send the variables get reply */
     pilot_rpi_plc_variables_get_reply(actual_size);
@@ -1547,42 +1514,35 @@ static void pilot_rpi_plc_variables_get()
     pilot_comm_send(target_plc_read, _internals.plc.read_values.buffer, actual_size);
   }
 
-$endif$
 }
 
 /* is called when the plc variable get cmd is received */
 static void pilot_rpi_plc_variable_get(pilot_cmd_t * cmd)
 {
-$if(model.PLC)$
-  read_from_plc_variable(*((uint16_t *)&cmd->data[8]), cmd->data, 0);
+  plc_read_from_variable(*((uint16_t *)&cmd->data[8]), cmd->data, pilot_cmd_t_data_size);
   *((uint16_t *)&cmd->data[8]) &= 0xFFF; //remove flags for reply
 
   /* send the answer */
   cmd->length = MSG_LEN(12); //TODO make size dynamic depending on var size
   pilot_comm_send_cmd(cmd);
-$endif$
 }
 
 /* is called when the plc variable get cmd is received */
 static void pilot_rpi_plc_variable_set(pilot_cmd_t * cmd)
 {
-$if(model.PLC)$
-  write_to_plc_variable(*((uint16_t *)&cmd->data[8]), (uint8_t *)cmd->data, 0);
+  plc_write_to_variable(*((uint16_t *)&cmd->data[8]), (uint8_t *)cmd->data, pilot_cmd_t_data_size);
  
   /* send the answer */
   cmd->length = MSG_LEN(12); //TODO make size dynamic depending on var size
   pilot_comm_send_cmd(cmd);
-$endif$
 }
 
 /* is called when the plc variables set cmd is received */
 static void pilot_rpi_plc_variables_set(pilot_cmd_t *cmd)
 {
-$if(model.PLC)$
   /* expect a variables command stream */
   _internals.plc.write_values.expected = INT_FROM_BYTES((cmd->data + (int)pilot_plc_variables_value_index_size));
   _internals.plc.write_values.count = 0;
-$endif$
 }
 
 static void pilot_comm_run_test(pilot_cmd_t *cmd)
@@ -1708,22 +1668,22 @@ static void rpc_pilot_comm_spi_handle_cmd_complete(pilot_cmd_t *cmd)
 
       case pilot_cmd_type_usart_set_baudrate:
         baudrate = rpc_stm_proto_baudrate_to_int((pilot_cmd_baudrate_t) cmd->data[0]);
-        rpc_pilot_comm_set_baudrate(slot, port, baudrate);
+        pilot_comm_set_baudrate(slot, port, baudrate);
         break;
 
       case pilot_cmd_type_usart_set_stopbits:
         stopbits = rpc_pilot_comm_spi_get_mc_stopbits((pilot_cmd_stopbits_t) cmd->data[0]);
-        rpc_pilot_comm_set_stopbits(slot, port, stopbits);
+        pilot_comm_set_stopbits(slot, port, stopbits);
         break;
 
       case pilot_cmd_type_usart_set_parity:
         parity = rpc_pilot_comm_spi_get_mc_parity((pilot_cmd_parity_t) cmd->data[0]);
-        rpc_pilot_comm_set_parity(slot, port, parity);
+        pilot_comm_set_parity(slot, port, parity);
         break;
 
       case pilot_cmd_type_usart_set_wordlength:
         wordlength = rpc_pilot_comm_spi_get_mc_wordlength((pilot_cmd_wordlength_t) cmd->data[0]);
-        rpc_pilot_comm_set_wordlength(slot, port, wordlength);
+        pilot_comm_set_wordlength(slot, port, wordlength);
         break;
 
       case pilot_cmd_type_input_get_input:
