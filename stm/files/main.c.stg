@@ -259,7 +259,7 @@ void initialize_tick()
   cycle_max = 0;
 
   // plc_state
-  plc_state = 0;
+  plc_state = 1;
 }
 
 static void pilot_main_loop()
@@ -405,9 +405,6 @@ int main(void)
   /* initialize the test */
   pilot_test_init();
 <endif>
-
-  //init plc specific module hardware
-  plc_init_modules();
 
   //init plc
   plc_init();
