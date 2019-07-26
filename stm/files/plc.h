@@ -15,7 +15,6 @@ void plc_init();
 void plc_read_inputs();
 void plc_write_outputs();
 void plc_run(unsigned long tick);
-void plc_init_modules(void);
 int plc_configure_read_variables(uint16_t *variables, int count);
 int plc_read_variables(uint8_t *buffer);
 void plc_configure_write_variables(uint16_t *variables, int count);

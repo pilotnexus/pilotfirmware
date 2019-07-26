@@ -1,9 +1,6 @@
 #include "plc.h"
 
 
-void plc_init_modules() 
-{}
-
 void plc_read_inputs()
 {}
 
