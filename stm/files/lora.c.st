@@ -4,7 +4,7 @@
 
 $model.LORAs:{lora|
 
-static void rpc_$lora.Name$_gpio_init(void)
+static void pilot_$lora.Name$_gpio_init(void)
 {
   GPIO_InitTypeDef gpio;
 
@@ -24,30 +24,30 @@ static void rpc_$lora.Name$_gpio_init(void)
   GPIO_Init($lora.NResetGpio$, &gpio);
 \}
 
-void rpc_$lora.Name$_set_enable(int enable)
+void pilot_$lora.Name$_set_enable(int enable)
 {
   /* enable / disable the lora by pulling NRESET to high / low */
   GPIO_WriteBit($lora.NResetGpio$, $lora.NResetPin$, enable ? Bit_SET : Bit_RESET);
 \}
 
-int rpc_$lora.Name$_get_enable()
+int pilot_$lora.Name$_get_enable()
 {
   return GPIO_ReadOutputDataBit($lora.NResetGpio$, $lora.NResetPin$) == Bit_SET ? 1 : 0;
 \}
 
-void rpc_$lora.Name$_init(void)
+void pilot_$lora.Name$_init(void)
 {
   /* initialize the gpios */
-  rpc_$lora.Name$_gpio_init();
+  pilot_$lora.Name$_gpio_init();
 
   /* initialize the usart */
-  rpc_$lora.Usart.Name$_init();
+  pilot_$lora.Usart.Name$_init();
 
   /* configure the usart for lora usage */
-  rpc_$lora.Usart.Name$_set_baudrate(9600);
+  pilot_$lora.Usart.Name$_set_baudrate(9600);
 
   /* enable the lora */
-  //rpc_$lora.Name$_set_enable(1);
+  //pilot_$lora.Name$_set_enable(1);
 \}
 
 };separator="\n"$

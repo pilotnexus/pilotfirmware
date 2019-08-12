@@ -11,8 +11,8 @@ LDFLAGS=-specs=nosys.specs -nostartfiles -Wl,-Tstm32.ld
 #LDFLAGS=-Wl,-Tstm32.ld -nostdlib -nodefaultlibs -nostartfiles -Xlinker -Map=output.map
 #LDFLAGS=-Wl,-Tstm32.ld -nostartfiles -Xlinker -Map=output.map
 #CCFLAGS=-mcpu=cortex-m3 -mthumb -std=c99 -DUSE_STDPERIPH_DRIVER -specs=nosys.specs -nostartfiles -g -O$(DEBUG_LEVEL) -Wl,-Tstm32.ld -I"." -I"inc" 
-CCFLAGS=-mcpu=cortex-m3 -mthumb -std=c99 -DUSE_STDPERIPH_DRIVER -specs=nosys.specs -nostartfiles -g -O$(DEBUG_LEVEL) -Wl,-Tstm32.ld -I"." -I"inc" 
-LDFLAGS=-mcpu=cortex-m3 -mthumb -std=c99 -DUSE_STDPERIPH_DRIVER -specs=nosys.specs -nostartfiles -g -O$(DEBUG_LEVEL) -Wl,-Tstm32.ld -I"." -I"inc" 
+CCFLAGS=-mcpu=cortex-m3 -mthumb -DUSE_STDPERIPH_DRIVER -specs=nosys.specs -nostartfiles -g -O$(DEBUG_LEVEL) -Wl,-Tstm32.ld -I"." -I"inc" 
+LDFLAGS=-mcpu=cortex-m3 -mthumb -DUSE_STDPERIPH_DRIVER -specs=nosys.specs -nostartfiles -g -O$(DEBUG_LEVEL) -Wl,-Tstm32.ld -I"." -I"inc" 
 
 SRCS=$(wildcard *.c)
 SSRCS=$(wildcard *.s)

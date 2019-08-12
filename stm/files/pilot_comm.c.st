@@ -1,3 +1,4 @@
+#include "main.h"
 #include "pilot_comm.h"
 #include "plc.h"
 #include "eeprom.h"
@@ -31,12 +32,12 @@ $endif$
 /* holds private members */
 static internals_t _internals = {0};
 
-static void rpc_pilot_comm_spi_init(void);
-static void rpc_pilot_comm_spi_dma_init();
-static void rpc_pilot_comm_gpio_init(void);
-static void rpc_pilot_comm_gpio_clear(void);
+static void pilot_pilot_comm_spi_init(void);
+static void pilot_pilot_comm_spi_dma_init();
+static void pilot_pilot_comm_gpio_init(void);
+static void pilot_pilot_comm_gpio_clear(void);
 
-static void rpc_pilot_comm_spi_handle_cmd_complete(pilot_cmd_t* cmd);
+static void pilot_pilot_comm_spi_handle_cmd_complete(pilot_cmd_t* cmd);
 static void pilot_comm_handle_plc_readdata(char data);
 static void pilot_comm_handle_plc_writedata(char data);
 
@@ -46,16 +47,16 @@ void pilot_comm_init()
   NVIC_PriorityGroupConfig(NVIC_PriorityGroup_0);
 
   /* configure the additional gpios used in the rpi kernel driver communication */
-  rpc_pilot_comm_gpio_init();
+  pilot_pilot_comm_gpio_init();
 
   /* make sure the gpios are cleared */
-  rpc_pilot_comm_gpio_clear();
+  pilot_pilot_comm_gpio_clear();
 
   /* setup the spi communication with the rpi kernel driver */
-  rpc_pilot_comm_spi_init();
+  pilot_pilot_comm_spi_init();
   
   /* setup spi circular DMA */
-  rpc_pilot_comm_spi_dma_init();
+  pilot_pilot_comm_spi_dma_init();
 
   //init stats
   _internals.stats.tx_buffer_min = TX_BUFFER_SIZE;
@@ -140,7 +141,7 @@ void pilot_comm_send_cmd(pilot_cmd_t *cmd)
   pilot_setup_spi_tx();
 }
 
-static void rpc_pilot_comm_spi_dma_init()
+static void pilot_pilot_comm_spi_dma_init()
 {
   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);      // Enable DMA1 clock
 
@@ -197,7 +198,7 @@ static void rpc_pilot_comm_spi_dma_init()
 }
 
 /* initializes the spi interface */
-static void rpc_pilot_comm_spi_init()
+static void pilot_pilot_comm_spi_init()
 {
   GPIO_InitTypeDef gpio;
   SPI_InitTypeDef spi;
@@ -340,7 +341,7 @@ void pilot_comm_spi_tx_done()
 }
 
 /* initializes the additional gpios used in the  <-> rpi communication */
-static void rpc_pilot_comm_gpio_init()
+static void pilot_pilot_comm_gpio_init()
 {
   /* declare variables */
   GPIO_InitTypeDef outputs;
@@ -371,12 +372,12 @@ static void rpc_pilot_comm_gpio_init()
 }
 
 /* clear the outputs */
-static void rpc_pilot_comm_gpio_clear()
+static void pilot_pilot_comm_gpio_clear()
 {
   GPIO_WriteBit(GPIO_Pin_BOARD, GPIO_Pin_DATA_M2R, Bit_RESET);
 }
 
-static void rpc_pilot_comm_send_bufferstate_cmd(stm_bufferstate_t bufferstate)
+static void pilot_pilot_comm_send_bufferstate_cmd(stm_bufferstate_t bufferstate)
 {
   pilot_cmd_t cmd;
   
@@ -389,7 +390,7 @@ static void rpc_pilot_comm_send_bufferstate_cmd(stm_bufferstate_t bufferstate)
   pilot_comm_send_cmd(&cmd);
 }
 
-static void rpc_send_data_to_module(module_slot_t slot, module_port_t port, uint8_t data, uint16_t spidata)
+static void pilot_send_data_to_module(module_slot_t slot, module_port_t port, uint8_t data, uint16_t spidata)
 {
 $model.Modules:{module|
   if (slot == $module.Slot$)
@@ -397,13 +398,13 @@ $model.Modules:{module|
     if (port == module_port_1)
     {
       $if(module.Port1)$
-      rpc_$module.Port1$_send_char(data);
+      pilot_$module.Port1$_send_char(data);
       $endif$
     \}
     else if (port == module_port_2)
     {
       $if(module.Port2)$
-      rpc_$module.Port2$_send_char(data);
+      pilot_$module.Port2$_send_char(data);
       $endif$
     \}
   \}
@@ -506,7 +507,7 @@ static void pilot_spi0_handle_received_cmd_byte(target_t target, uint8_t data)
     {
       /* handle the command by copy */
       _internals.current_cmd.cmd.length &= 0x7F; //remove parity
-      rpc_pilot_comm_spi_handle_cmd_complete(&_internals.current_cmd.cmd);
+      pilot_pilot_comm_spi_handle_cmd_complete(&_internals.current_cmd.cmd);
     }
     else
     {
@@ -571,7 +572,7 @@ void pilot_handle_received_data()
         if (slot >= 0 && slot < 4 && port >= 0 && port < 2)
         {
           /* routing of module_slot & module_port -> usart/spi */
-          rpc_send_data_to_module(slot, port, data, spidata);
+          pilot_send_data_to_module(slot, port, data, spidata);
         }
         else
         {
@@ -582,7 +583,7 @@ void pilot_handle_received_data()
   }
 }
 
-static int rpc_stm_proto_baudrate_to_int(pilot_cmd_baudrate_t value)
+static int pilot_stm_proto_baudrate_to_int(pilot_cmd_baudrate_t value)
 {
   int baudrate;
 
@@ -602,7 +603,7 @@ static int rpc_stm_proto_baudrate_to_int(pilot_cmd_baudrate_t value)
 }
 
 
-static uint16_t rpc_pilot_comm_spi_get_mc_stopbits(pilot_cmd_stopbits_t pilot_stopbits)
+static uint16_t pilot_pilot_comm_spi_get_mc_stopbits(pilot_cmd_stopbits_t pilot_stopbits)
 {
   uint16_t mc_stopbits;
   switch (pilot_stopbits)
@@ -615,7 +616,7 @@ static uint16_t rpc_pilot_comm_spi_get_mc_stopbits(pilot_cmd_stopbits_t pilot_st
   return mc_stopbits;
 }
 
-static uint16_t rpc_pilot_comm_spi_get_mc_parity(pilot_cmd_parity_t pilot_parity)
+static uint16_t pilot_pilot_comm_spi_get_mc_parity(pilot_cmd_parity_t pilot_parity)
 {
   uint16_t mc_parity;
   switch (pilot_parity)
@@ -628,7 +629,7 @@ static uint16_t rpc_pilot_comm_spi_get_mc_parity(pilot_cmd_parity_t pilot_parity
   return mc_parity;
 }
 
-static uint16_t rpc_pilot_comm_spi_get_mc_wordlength(pilot_cmd_wordlength_t pilot_wordlength)
+static uint16_t pilot_pilot_comm_spi_get_mc_wordlength(pilot_cmd_wordlength_t pilot_wordlength)
 {
   uint16_t mc_databits;
   switch (pilot_wordlength)
@@ -646,11 +647,11 @@ $model.Modules:{module|
   if (slot == $module.Slot$) {
    if (port == module_port_1) {
      $if(module.Port1)$
-     rpc_$module.Port1$_set_baudrate(baudrate);
+     pilot_$module.Port1$_set_baudrate(baudrate);
      $endif$
    \} else if (port == module_port_2) {
      $if(module.Port2)$
-     rpc_$module.Port2$_set_baudrate(baudrate);
+     pilot_$module.Port2$_set_baudrate(baudrate);
      $endif$
    \}
   \}
@@ -663,11 +664,11 @@ $model.Modules:{module|
   if (slot == $module.Slot$) {
    if (port == module_port_1) {
      $if(module.Port1)$
-     rpc_$module.Port1$_set_stopbits(stopbits);
+     pilot_$module.Port1$_set_stopbits(stopbits);
      $endif$
    \} else if (port == module_port_2) {
      $if(module.Port2)$
-     rpc_$module.Port2$_set_stopbits(stopbits);
+     pilot_$module.Port2$_set_stopbits(stopbits);
      $endif$
    \}
   \}
@@ -680,11 +681,11 @@ $model.Modules:{module|
   if (slot == $module.Slot$) {
    if (port == module_port_1) {
      $if(module.Port1)$
-     rpc_$module.Port1$_set_parity(parity);
+     pilot_$module.Port1$_set_parity(parity);
      $endif$
    \} else if (port == module_port_2) {
      $if(module.Port2)$
-     rpc_$module.Port2$_set_parity(parity);
+     pilot_$module.Port2$_set_parity(parity);
      $endif$
     \}
   \}
@@ -697,18 +698,18 @@ $model.Modules:{module|
   if (slot == $module.Slot$) {
    if (port == module_port_1) {
      $if(module.Port1)$
-     rpc_$module.Port1$_set_wordlength(wordlength);
+     pilot_$module.Port1$_set_wordlength(wordlength);
      $endif$
    \} else if (port == module_port_2) {
      $if(module.Port2)$
-     rpc_$module.Port2$_set_wordlength(wordlength);
+     pilot_$module.Port2$_set_wordlength(wordlength);
      $endif$
    \}
   \}
 };separator="\n"$
 }
 
-static void rpc_pilot_comm_get_input_state_cmd(module_slot_t slot, uint8_t input, pilot_cmd_t *cmd)
+static void pilot_pilot_comm_get_input_state_cmd(module_slot_t slot, uint8_t input, pilot_cmd_t *cmd)
 {
   uint32_t value;
   $if(model.IA8s)$
@@ -725,12 +726,12 @@ static void rpc_pilot_comm_get_input_state_cmd(module_slot_t slot, uint8_t input
   {
     $model.I8s:{i8|case $i8.Slot$: value = $i8.Name$_get_state(input); break;};separator="\n"$
     $model.IA8s:{ia8|case $ia8.Slot$:
-      rpc_$ia8.Name$_get_value(input, &ia_value);
+      pilot_$ia8.Name$_get_value(input, &ia_value);
       value = ia_value;
       break;
     };separator="\n"$
     $model.IO16s:{io16|case $io16.Slot$:
-      rpc_$io16.Name$_get_value(input, &io16_value);
+      pilot_$io16.Name$_get_value(input, &io16_value);
       value = io16_value;
       break;
     };separator="\n"$
@@ -754,19 +755,19 @@ static void rpc_pilot_comm_get_input_state_cmd(module_slot_t slot, uint8_t input
   cmd->length = MSG_LEN(8);
 }
 
-static void rpc_pilot_comm_send_input_state(module_slot_t slot, uint8_t input)
+static void pilot_pilot_comm_send_input_state(module_slot_t slot, uint8_t input)
 {
   pilot_cmd_t cmd;
 
   /* get a command that contains the input state */
-  rpc_pilot_comm_get_input_state_cmd(slot, input, &cmd);
+  pilot_pilot_comm_get_input_state_cmd(slot, input, &cmd);
 
   /* send the input state cmd */
   pilot_comm_send_cmd(&cmd);
 }
 
 /* sends the counter values to the rpi */
-static void rpc_pilot_comm_get_counter_values(module_slot_t slot, pilot_counter_target_t counter_target)
+static void pilot_pilot_comm_get_counter_values(module_slot_t slot, pilot_counter_target_t counter_target)
 {
 $if(model.Counter8s)$
   pilot_cmd_t cmd; int counter_index;
@@ -793,7 +794,7 @@ $model.Counter8s:{counter8|
 
 }
 
-static void rpc_pilot_comm_send_rtc()
+static void pilot_pilot_comm_send_rtc()
 {
   pilot_cmd_t cmd;
 
@@ -817,17 +818,17 @@ void pilot_comm_send_input_changed(module_slot_t slot)
 }
 
 //START LORA
-static void rpc_rpi_lora_set_enable(module_slot_t slot, int enable)
+static void pilot_rpi_lora_set_enable(module_slot_t slot, int enable)
 {
 $model.LORAs:{lora|
   if (slot == $lora.Slot$)
   {
-    rpc_$lora.Name$_set_enable(enable);
+    pilot_$lora.Name$_set_enable(enable);
   \}
 };separator="\n"$
 }
 
-static void rpc_rpi_lora_get_enable(module_slot_t slot)
+static void pilot_rpi_lora_get_enable(module_slot_t slot)
 {
 $if(model.LORAs)$
   int enabled;
@@ -837,7 +838,7 @@ $if(model.LORAs)$
   switch (slot)
   {
 $model.LORAs:{lora|
-    case $lora.Slot$: enabled = rpc_$lora.Name$_get_enable(); break;
+    case $lora.Slot$: enabled = pilot_$lora.Name$_get_enable(); break;
 };separator="\n"$
     default: return;
   }
@@ -853,17 +854,17 @@ $endif$
 }
 //END LORA
 
-static void rpc_rpi_gps_set_enable(module_slot_t slot, int enable)
+static void pilot_rpi_gps_set_enable(module_slot_t slot, int enable)
 {
 $model.GPSs:{gps|
   if (slot == $gps.Slot$)
   {
-    rpc_$gps.Name$_set_enable(enable);
+    pilot_$gps.Name$_set_enable(enable);
   \}
 };separator="\n"$
 }
 
-static void rpc_rpi_gps_get_enable(module_slot_t slot)
+static void pilot_rpi_gps_get_enable(module_slot_t slot)
 {
 $if(model.GPSs)$
   int enabled;
@@ -873,7 +874,7 @@ $if(model.GPSs)$
   switch (slot)
   {
 $model.GPSs:{gps|
-    case $gps.Slot$: enabled = rpc_$gps.Name$_get_enable(); break;
+    case $gps.Slot$: enabled = pilot_$gps.Name$_get_enable(); break;
 };separator="\n"$
     default: return;
   }
@@ -921,15 +922,15 @@ $model.GSMs:{gsm |
 $endif$
 }
 
-static void rpc_rpi_onewire_set_enable(module_slot_t slot, int enable)
+static void pilot_rpi_onewire_set_enable(module_slot_t slot, int enable)
 {
   $model.OneWires:{ow|
     if (slot == $ow.Slot$)
-      rpc_$ow.Name$_set_enable(enable);
+      pilot_$ow.Name$_set_enable(enable);
   };separator="\n"$
 }
 
-static void rpc_rpi_onewire_get_enable(module_slot_t slot)
+static void pilot_rpi_onewire_get_enable(module_slot_t slot)
 {
 $if(model.OneWires)$
   int enabled;
@@ -939,7 +940,7 @@ $if(model.OneWires)$
   switch ((int)slot)
   {
 $model.OneWires:{ow|
-    case $ow.Slot$: enabled = rpc_$ow.Name$_get_enable(); break;
+    case $ow.Slot$: enabled = pilot_$ow.Name$_get_enable(); break;
 };separator="\n"$
     default: return;
   }
@@ -1015,21 +1016,21 @@ $model.SLCDs:{slcd|
 $endif$
 }
 
-static void rpc_pilot_comm_set_output(module_slot_t slot, pilot_output_target_t output, uint16_t value)
+static void pilot_pilot_comm_set_output(module_slot_t slot, pilot_output_target_t output, uint16_t value)
 {
   switch (slot)
   {
     $model.O8s:{o8|case $o8.Slot$: pilot_$o8.Name$_set_value(output, value); break;};separator="\n"$
-    $model.IO16s:{io16|case $io16.Slot$: rpc_$io16.Name$_set_value(output, value); break;};separator="\n"$
+    $model.IO16s:{io16|case $io16.Slot$: pilot_$io16.Name$_set_value(output, value); break;};separator="\n"$
     $model.AIO20s:{aio20|case $aio20.Slot$: single_ended_dac_write($aio20.Slot$, output, value); break;};separator="\n"$
   }
 }
 
-static void rpc_rpi_io16_set_direction(module_slot_t slot, pilot_io16_block_t block, pilot_io16_direction_t direction)
+static void pilot_rpi_io16_set_direction(module_slot_t slot, pilot_io16_block_t block, pilot_io16_direction_t direction)
 {
   switch (slot)
   {
-    $model.IO16s:{io16|case $io16.Slot$: rpc_$io16.Name$_set_direction(block, direction); break;};separator="\n"$
+    $model.IO16s:{io16|case $io16.Slot$: pilot_$io16.Name$_set_direction(block, direction); break;};separator="\n"$
   }
 }
 
@@ -1233,14 +1234,7 @@ $model.Modules:{m|
 
 /* global plc variables */
 extern int plc_state;
-extern unsigned int cycle_tick;
-extern unsigned int cycle_current;
-extern unsigned int cycle_min;
-extern unsigned int cycle_max;
-extern unsigned int cycle_current_comm; //time until comm done
-extern unsigned int cycle_current_read; //time until read
-extern unsigned int cycle_current_program; //time for program
-extern unsigned int cycle_current_write; //time until write
+extern cycletimes_t cycles;
 extern unsigned long long __tick;
 
 static void pilot_rpi_plc_state_get()
@@ -1265,13 +1259,13 @@ static void pilot_rpi_plc_cycletimes_get()
   pilot_cmd_t cmd;
   uint16_t min, max, cur, tick, comm, read, program, write;
   /* get the current values */
-  min = (uint16_t) (cycle_min / ($model.ClockSpeed$ / 1000000));
-  max = (uint16_t) (cycle_max / ($model.ClockSpeed$ / 1000000));
-  cur = (uint16_t) (cycle_current / ($model.ClockSpeed$ / 1000000));
-  comm = (uint16_t) (cycle_current_comm / ($model.ClockSpeed$ / 1000000));
-  read = (uint16_t) (cycle_current_read / ($model.ClockSpeed$ / 1000000));
-  program = (uint16_t) (cycle_current_program / ($model.ClockSpeed$ / 1000000));
-  write = (uint16_t) (cycle_current_write / ($model.ClockSpeed$ / 1000000));
+  min = (uint16_t) (cycles.cycle_min / ($model.ClockSpeed$ / 1000000));
+  max = (uint16_t) (cycles.cycle_max / ($model.ClockSpeed$ / 1000000));
+  cur = (uint16_t) (cycles.cycle_current / ($model.ClockSpeed$ / 1000000));
+  comm = (uint16_t) ((cycles.cycle_current_comm-cycles.cycle_start) / ($model.ClockSpeed$ / 1000000));
+  read = (uint16_t) ((cycles.cycle_current_read-cycles.cycle_current_comm)/ ($model.ClockSpeed$ / 1000000));
+  program = (uint16_t) ((cycles.cycle_current_program-cycles.cycle_current_read) / ($model.ClockSpeed$ / 1000000));
+  write = (uint16_t) ((cycles.cycle_current_write-cycles.cycle_current_program) / ($model.ClockSpeed$ / 1000000));
   tick = (uint16_t) __tick;
 
   /* create the answer */
@@ -1625,7 +1619,7 @@ static void pilot_rpi_fwinfo_cmd(pilot_cmd_t *cmd) {
   pilot_comm_send_cmd(cmd);
 }
 
-static void rpc_pilot_comm_spi_handle_cmd_complete(pilot_cmd_t *cmd)
+static void pilot_pilot_comm_spi_handle_cmd_complete(pilot_cmd_t *cmd)
 {
   int baudrate; uint16_t stopbits, parity, wordlength, i;
   module_slot_t slot; module_port_t port;
@@ -1667,36 +1661,36 @@ static void rpc_pilot_comm_spi_handle_cmd_complete(pilot_cmd_t *cmd)
         break;
 
       case pilot_cmd_type_usart_set_baudrate:
-        baudrate = rpc_stm_proto_baudrate_to_int((pilot_cmd_baudrate_t) cmd->data[0]);
+        baudrate = pilot_stm_proto_baudrate_to_int((pilot_cmd_baudrate_t) cmd->data[0]);
         pilot_comm_set_baudrate(slot, port, baudrate);
         break;
 
       case pilot_cmd_type_usart_set_stopbits:
-        stopbits = rpc_pilot_comm_spi_get_mc_stopbits((pilot_cmd_stopbits_t) cmd->data[0]);
+        stopbits = pilot_pilot_comm_spi_get_mc_stopbits((pilot_cmd_stopbits_t) cmd->data[0]);
         pilot_comm_set_stopbits(slot, port, stopbits);
         break;
 
       case pilot_cmd_type_usart_set_parity:
-        parity = rpc_pilot_comm_spi_get_mc_parity((pilot_cmd_parity_t) cmd->data[0]);
+        parity = pilot_pilot_comm_spi_get_mc_parity((pilot_cmd_parity_t) cmd->data[0]);
         pilot_comm_set_parity(slot, port, parity);
         break;
 
       case pilot_cmd_type_usart_set_wordlength:
-        wordlength = rpc_pilot_comm_spi_get_mc_wordlength((pilot_cmd_wordlength_t) cmd->data[0]);
+        wordlength = pilot_pilot_comm_spi_get_mc_wordlength((pilot_cmd_wordlength_t) cmd->data[0]);
         pilot_comm_set_wordlength(slot, port, wordlength);
         break;
 
       case pilot_cmd_type_input_get_input:
-        rpc_pilot_comm_send_input_state(slot, cmd->data[(int)pilot_input_index_target]);
+        pilot_pilot_comm_send_input_state(slot, cmd->data[(int)pilot_input_index_target]);
         break;
 
       case pilot_cmd_type_output_set_value:
-        rpc_pilot_comm_set_output(slot, (pilot_output_target_t) cmd->data[(int)pilot_output_index_target], *((uint32_t *)&cmd->data[(int)pilot_output_index_value]));
+        pilot_pilot_comm_set_output(slot, (pilot_output_target_t) cmd->data[(int)pilot_output_index_target], *((uint32_t *)&cmd->data[(int)pilot_output_index_value]));
         break;
 
       /* rpi requests the rtc time, send it an answer */
       case pilot_cmd_type_rtc_get:
-        rpc_pilot_comm_send_rtc();
+        pilot_pilot_comm_send_rtc();
         break;
 
       /* rpi sends rtc datetime, update rtc */
@@ -1706,7 +1700,7 @@ static void rpc_pilot_comm_spi_handle_cmd_complete(pilot_cmd_t *cmd)
 
       /* rpi requests counter values, send it an answer*/
       case pilot_cmd_type_input_get_counter:
-        rpc_pilot_comm_get_counter_values(slot, (pilot_counter_target_t)cmd->data[pilot_counter_index_target]);
+        pilot_pilot_comm_get_counter_values(slot, (pilot_counter_target_t)cmd->data[pilot_counter_index_target]);
         break;
 
       /* rpi sets the counter */
@@ -1716,12 +1710,12 @@ static void rpc_pilot_comm_spi_handle_cmd_complete(pilot_cmd_t *cmd)
 
       /* rpi enables / disables the gps */
       case pilot_cmd_type_gps_set_enable:
-        rpc_rpi_gps_set_enable(slot, cmd->data[pilot_gps_enable_index_value]);
+        pilot_rpi_gps_set_enable(slot, cmd->data[pilot_gps_enable_index_value]);
         break;
 
       /* rpi request gps enabled state */
       case pilot_cmd_type_gps_get_enable:
-        rpc_rpi_gps_get_enable(slot);
+        pilot_rpi_gps_get_enable(slot);
         break;
 
       /* rpi enables / disables the gsm */
@@ -1736,12 +1730,12 @@ static void rpc_pilot_comm_spi_handle_cmd_complete(pilot_cmd_t *cmd)
 
       /* rpi enables / disables 1-wire */
       case pilot_cmd_type_onewire_set_enable:
-        rpc_rpi_onewire_set_enable(slot, cmd->data[pilot_onewire_enable_index_value]);
+        pilot_rpi_onewire_set_enable(slot, cmd->data[pilot_onewire_enable_index_value]);
         break;
 
       /* rpi requests onewire enabled state */
       case pilot_cmd_type_onewire_get_enable:
-        rpc_rpi_onewire_get_enable(slot);
+        pilot_rpi_onewire_get_enable(slot);
         break;
 
       /* rpi sends scld update */
@@ -1786,7 +1780,7 @@ static void rpc_pilot_comm_spi_handle_cmd_complete(pilot_cmd_t *cmd)
         break;
 
       case pilot_cmd_type_io16_set_direction:
-        rpc_rpi_io16_set_direction(slot, 
+        pilot_rpi_io16_set_direction(slot, 
           (pilot_io16_block_t)cmd->data[(int)pilot_io16_set_direction_index_block],
           (pilot_io16_direction_t)cmd->data[(int)pilot_io16_set_direction_index_direction]);
         break;
@@ -1798,12 +1792,12 @@ static void rpc_pilot_comm_spi_handle_cmd_complete(pilot_cmd_t *cmd)
 
       /* rpi enables / disables lora */
       case pilot_cmd_type_lora_set_enable:
-        rpc_rpi_lora_set_enable(slot, cmd->data[pilot_lora_enable_index_value]);
+        pilot_rpi_lora_set_enable(slot, cmd->data[pilot_lora_enable_index_value]);
         break;
 
       /* rpi request lora enabled state */
       case pilot_cmd_type_lora_get_enable:
-        rpc_rpi_lora_get_enable(slot);
+        pilot_rpi_lora_get_enable(slot);
         break;
 
       case pilot_cmd_type_test_run:

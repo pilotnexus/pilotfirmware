@@ -5,7 +5,7 @@ $model.Usarts:{usart|
 /* declare usart configuration  */
 static USART_InitTypeDef m_$usart.Name$;
 
-static void rpc_$usart.Name$_configure_clocks()
+static void pilot_$usart.Name$_configure_clocks()
 {
 #ifdef STM32F4XX
   RCC_AHB$usart.AHB$PeriphClockCmd( RCC_AHB$usart.RxAHB$Periph_$usart.RxGPIO$, ENABLE);
@@ -17,7 +17,7 @@ static void rpc_$usart.Name$_configure_clocks()
   RCC_APB$usart.APB$PeriphClockCmd( RCC_APB$usart.APB$Periph_$usart.Name$, ENABLE);
 \}
 
-static void rpc_$usart.Name$_connect_usart_pins()
+static void pilot_$usart.Name$_connect_usart_pins()
 {
 #ifdef STM32F4XX
   GPIO_PinAFConfig($usart.RxGPIO$, $usart.RxPinSource$, GPIO_AF_$usart.Name$);
@@ -25,7 +25,7 @@ static void rpc_$usart.Name$_connect_usart_pins()
 #endif
 \}
 
-static void rpc_$usart.Name$_configure_gpios()
+static void pilot_$usart.Name$_configure_gpios()
 {
   /* configure gpios */
   GPIO_InitTypeDef inputs, outputs;
@@ -57,13 +57,13 @@ static void rpc_$usart.Name$_configure_gpios()
   GPIO_Init($usart.TxGPIO$, &outputs);
 \}
 
-static void rpc_$usart.Name$_configure()
+static void pilot_$usart.Name$_configure()
 {
   USART_Init($usart.Name$, &m_$usart.Name$);
   USART_Cmd($usart.Name$, ENABLE);
 \}
 
-static void rpc_$usart.Name$_configure_init()
+static void pilot_$usart.Name$_configure_init()
 {
   /* initialize the USART struct */
   m_$usart.Name$.USART_BaudRate            = 9600;
@@ -74,10 +74,10 @@ static void rpc_$usart.Name$_configure_init()
   m_$usart.Name$.USART_WordLength          = USART_WordLength_8b;
 
   /* apply the configuration */
-  rpc_$usart.Name$_configure();
+  pilot_$usart.Name$_configure();
 \}
 
-static void rpc_$usart.Name$_configure_interrupt()
+static void pilot_$usart.Name$_configure_interrupt()
 {
   NVIC_InitTypeDef nvic;
 
@@ -92,7 +92,7 @@ static void rpc_$usart.Name$_configure_interrupt()
   USART_ITConfig($usart.Name$, USART_IT_RXNE, ENABLE);
 \}
 
-uint8_t rpc_$usart.Name$_receive_char()
+uint8_t pilot_$usart.Name$_receive_char()
 {
   uint8_t recv = (uint8_t) USART_ReceiveData($usart.Name$);
 
@@ -104,43 +104,43 @@ uint8_t rpc_$usart.Name$_receive_char()
   return recv;
 \}
 
-void rpc_$usart.Name$_send_char(char c)
+void pilot_$usart.Name$_send_char(char c)
 {
   USART_SendData($usart.Name$, c);
   while (USART_GetFlagStatus($usart.Name$, USART_FLAG_TXE) == RESET);
 \}
 
-void rpc_$usart.Name$_set_baudrate(int baudrate)
+void pilot_$usart.Name$_set_baudrate(int baudrate)
 {
   m_$usart.Name$.USART_BaudRate = baudrate;
-  rpc_$usart.Name$_configure();
+  pilot_$usart.Name$_configure();
 \}
 
-void rpc_$usart.Name$_set_stopbits(uint16_t stopbits)
+void pilot_$usart.Name$_set_stopbits(uint16_t stopbits)
 {
   m_$usart.Name$.USART_StopBits = stopbits;
-  rpc_$usart.Name$_configure();
+  pilot_$usart.Name$_configure();
 \}
 
-void rpc_$usart.Name$_set_parity(uint16_t parity)
+void pilot_$usart.Name$_set_parity(uint16_t parity)
 {
   m_$usart.Name$.USART_Parity = parity;
-  rpc_$usart.Name$_configure();
+  pilot_$usart.Name$_configure();
 \}
 
-void rpc_$usart.Name$_set_wordlength(uint16_t wordlength)
+void pilot_$usart.Name$_set_wordlength(uint16_t wordlength)
 {
   m_$usart.Name$.USART_WordLength = wordlength;
-  rpc_$usart.Name$_configure();
+  pilot_$usart.Name$_configure();
 \}
 
-void rpc_$usart.Name$_init()
+void pilot_$usart.Name$_init()
 {
-  rpc_$usart.Name$_configure_clocks();
-  rpc_$usart.Name$_connect_usart_pins();
-  rpc_$usart.Name$_configure_gpios();
-  rpc_$usart.Name$_configure_init();
-  rpc_$usart.Name$_configure_interrupt();
+  pilot_$usart.Name$_configure_clocks();
+  pilot_$usart.Name$_connect_usart_pins();
+  pilot_$usart.Name$_configure_gpios();
+  pilot_$usart.Name$_configure_init();
+  pilot_$usart.Name$_configure_interrupt();
 \}
 
 };separator="\n"$

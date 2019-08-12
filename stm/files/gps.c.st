@@ -4,7 +4,7 @@
 
 $model.GPSs:{gps|
 
-static void rpc_$gps.Name$_gpio_init(void)
+static void pilot_$gps.Name$_gpio_init(void)
 {
   GPIO_InitTypeDef gpio;
 
@@ -24,30 +24,30 @@ static void rpc_$gps.Name$_gpio_init(void)
   GPIO_Init($gps.NResetGpio$, &gpio);
 \}
 
-void rpc_$gps.Name$_set_enable(int enable)
+void pilot_$gps.Name$_set_enable(int enable)
 {
   /* enable / disable the gps by pulling NRESET to high / low */
   GPIO_WriteBit($gps.NResetGpio$, $gps.NResetPin$, enable ? Bit_SET : Bit_RESET);
 \}
 
-int rpc_$gps.Name$_get_enable()
+int pilot_$gps.Name$_get_enable()
 {
   return GPIO_ReadOutputDataBit($gps.NResetGpio$, $gps.NResetPin$) == Bit_SET ? 1 : 0;
 \}
 
-void rpc_$gps.Name$_init(void)
+void pilot_$gps.Name$_init(void)
 {
   /* initialize the gpios */
-  rpc_$gps.Name$_gpio_init();
+  pilot_$gps.Name$_gpio_init();
 
   /* initialize the usart */
-  rpc_$gps.Usart.Name$_init();
+  pilot_$gps.Usart.Name$_init();
 
   /* configure the usart for gps usage */
-  rpc_$gps.Usart.Name$_set_baudrate(9600);
+  pilot_$gps.Usart.Name$_set_baudrate(9600);
 
   /* enable the gps */
-  //rpc_$gps.Name$_set_enable(1);
+  //pilot_$gps.Name$_set_enable(1);
 \}
 
 };separator="\n"$

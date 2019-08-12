@@ -1,11 +1,18 @@
 #include "plc.h"
+#include "plc_memory.h"
 
-
+extern plc_dev_t plc_mem_devices;
 void plc_read_inputs()
-{}
+{
+  plc_dev_to_mem();
+  plc_mem_to_var();
+}
 
-void plc_write_outputs()
-{}
+void plc_write_outputs() 
+{
+  plc_var_to_mem();
+  plc_mem_to_dev();
+}
 
 #ifndef EXTERNAL_PLC
 
@@ -14,19 +21,23 @@ void config_init__() {}
 
 void plc_init() {}
 
-void plc_run(unsigned long tick)
+void plc_run(uint64_t tick)
 {
   config_run__(tick);
 }
 
-/* Implementation for multi-read/write vars */
+void plc_mem_to_var() {}
+void plc_var_to_mem() {}
+
 int plc_configure_read_variables(uint16_t *variables, int count)
 {
   return 0;
 }
 
-void plc_configure_write_variables(uint16_t *variables, int count)
-{}
+int plc_configure_write_variables(uint16_t *variables, int count)
+{
+  return 0;
+}
 
 int plc_read_variables(uint8_t *buffer)
 {
@@ -37,12 +48,12 @@ void plc_write_variables(uint8_t *buffer, int count)
 {
 }
 
-int plc_read_from_variable(uint16_t number, uint8_t *buffer, int index)
+int plc_read_from_variable(uint16_t number, uint8_t *buffer, int size)
 {
   return 0;
 }
 
-int plc_write_to_variable(uint16_t varnumber, uint8_t *buffer, int index)
+int plc_write_to_variable(uint16_t varnumber, uint8_t *buffer, int size)
 {
   return 0;
 }

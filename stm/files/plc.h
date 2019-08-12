@@ -14,10 +14,13 @@
 void plc_init();
 void plc_read_inputs();
 void plc_write_outputs();
-void plc_run(unsigned long tick);
+void plc_run(uint64_t tick);
+void plc_init_modules(void);
+void plc_mem_to_var();
+void plc_var_to_mem();
 int plc_configure_read_variables(uint16_t *variables, int count);
 int plc_read_variables(uint8_t *buffer);
-void plc_configure_write_variables(uint16_t *variables, int count);
+int plc_configure_write_variables(uint16_t *variables, int count);
 void plc_write_variables(uint8_t *buffer, int count);
 int plc_read_from_variable(uint16_t number, uint8_t *buffer, int index);
 int plc_write_to_variable(uint16_t varnumber, uint8_t *buffer, int index);

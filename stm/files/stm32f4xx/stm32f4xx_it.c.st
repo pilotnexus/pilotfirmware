@@ -115,7 +115,7 @@ void PendSVC(void)
 *******************************************************************************/
 void SysTick_Handler(void)
 {
-  rpc_systick();
+  pilot_systick();
 }
 
 /*******************************************************************************
@@ -301,7 +301,7 @@ static void check_io16_input_changed(uint32_t extiLine, int slot)
   if (EXTI_GetITStatus(extiLine))
   {
     /* inform the rpi that an input changed */
-    rpc_io16_input_changed(slot);
+    pilot_io16_input_changed(slot);
 
     /* mark the interrupt as handled */
     EXTI_ClearITPendingBit(extiLine);
@@ -352,7 +352,7 @@ static void check_counter_increment(uint32_t extiLine, int counter, GPIO_TypeDef
 
     /* if it's high, than increment the counter */
     if (gpio_state)
-      rpc_counter_increment(counter);
+      pilot_counter_increment(counter);
 
     /* mark the interrupt as handled */
     EXTI_ClearITPendingBit(extiLine);
@@ -534,7 +534,7 @@ void I2C2_ER_IRQHandler(void)
 *******************************************************************************/
 void SPI1_IRQHandler(void)
 {
-  rpc_spi_receive();
+  pilot_spi_receive();
 }
 
 /*******************************************************************************
@@ -552,7 +552,7 @@ void SPI2_IRQHandler(void)
 $model.Usarts:{u|
 void $u.Name$_IRQHandler(void)
 {
-  rpc_$u.Name$_receive();
+  pilot_$u.Name$_receive();
 \}
 };separator="\n"$
 

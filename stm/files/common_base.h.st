@@ -2,8 +2,8 @@
     this file contains defines that are shared between the rpi drivers and the microcontroller
 */
 
-#ifndef RPC_COMMON_BASE_H
-#define RPC_COMMON_BASE_H
+#ifndef PILOT_COMMON_BASE_H
+#define PILOT_COMMON_BASE_H
 
 #include <stdint.h>
 

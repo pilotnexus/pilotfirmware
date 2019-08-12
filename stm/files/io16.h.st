@@ -1,6 +1,6 @@
 /* this file is auto-generated */
-#ifndef __RPC_IO16_H__
-#define __RPC_IO16_H__
+#ifndef __PILOT_IO16_H__
+#define __PILOT_IO16_H__
 
 #include "stm32_conf.h"
 #include "common_base.h"
@@ -49,17 +49,17 @@ typedef enum
 } pilot_io16_pins_t;
 
 $model.IO16s:{io16|
-  void rpc_$io16.Name$_init(void);
-  int rpc_$io16.Name$_read_register(pilot_io16_register_t reg, int count, uint8_t *value);
-  int rpc_$io16.Name$_write_register(pilot_io16_register_t reg, int count, uint8_t *value);
+  void pilot_$io16.Name$_init(void);
+  int pilot_$io16.Name$_read_register(pilot_io16_register_t reg, int count, uint8_t *value);
+  int pilot_$io16.Name$_write_register(pilot_io16_register_t reg, int count, uint8_t *value);
 
-  int rpc_$io16.Name$_set_direction(pilot_io16_block_t block, pilot_io16_direction_t direction);
-  int rpc_$io16.Name$_set_value(pilot_output_target_t output, uint8_t value);
-  int rpc_$io16.Name$_set_irq_handled(void);
+  int pilot_$io16.Name$_set_direction(pilot_io16_block_t block, pilot_io16_direction_t direction);
+  int pilot_$io16.Name$_set_value(pilot_output_target_t output, uint8_t value);
+  int pilot_$io16.Name$_set_irq_handled(void);
 
-  int rpc_$io16.Name$_get_value(uint8_t io, uint8_t *value);
-  uint8_t rpc_$io16.Name$_get_byte(pilot_io16_register_t reg);
-  void rpc_$io16.Name$_set_byte(pilot_io16_register_t reg, uint8_t value);
+  int pilot_$io16.Name$_get_value(uint8_t io, uint8_t *value);
+  uint8_t pilot_$io16.Name$_get_byte(pilot_io16_register_t reg);
+  void pilot_$io16.Name$_set_byte(pilot_io16_register_t reg, uint8_t value);
 
 
 };separator="\n"$

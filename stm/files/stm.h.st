@@ -1,7 +1,7 @@
 /* this file defines commands used by the rpi<-> communication */
 
-#ifndef RPC_STM_H
-#define RPC_STM_H
+#ifndef PILOT_STM_H
+#define PILOT_STM_H
 
 #include "common_base.h"
 

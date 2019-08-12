@@ -31,19 +31,19 @@ m(name) ::= "m_<name>"
 /* declares the usart functions and config member variable */
 Usart(usart) ::= <<
 
-void rpc_<usart.Name>_init(void);
+void pilot_<usart.Name>_init(void);
 
-uint8_t rpc_<usart.Name>_receive_char(void);
+uint8_t pilot_<usart.Name>_receive_char(void);
 
-void rpc_<usart.Name>_send_char(char c);
+void pilot_<usart.Name>_send_char(char c);
 
-void rpc_<usart.Name>_set_baudrate(int baudrate);
+void pilot_<usart.Name>_set_baudrate(int baudrate);
 
-void rpc_<usart.Name>_set_stopbits(uint16_t stopbits);
+void pilot_<usart.Name>_set_stopbits(uint16_t stopbits);
 
-void rpc_<usart.Name>_set_parity(uint16_t parity);
+void pilot_<usart.Name>_set_parity(uint16_t parity);
 
-void rpc_<usart.Name>_set_wordlength(uint16_t wordlength);
+void pilot_<usart.Name>_set_wordlength(uint16_t wordlength);
 
 >>
 

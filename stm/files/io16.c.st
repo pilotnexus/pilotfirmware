@@ -10,7 +10,7 @@ $model.IO16s:{io16|
 
 #define get_mosi_count( count ) ( ((count-1) << 4) | (0x0F & ~(count-1)) )
 
-int rpc_$io16.Name$_write_register(pilot_io16_register_t reg, int count, uint8_t *value)
+int pilot_$io16.Name$_write_register(pilot_io16_register_t reg, int count, uint8_t *value)
 {
   int16_t miso;
   uint8_t address_byte;
@@ -73,7 +73,7 @@ int rpc_$io16.Name$_write_register(pilot_io16_register_t reg, int count, uint8_t
   return ret;
 \}
 
-int rpc_$io16.Name$_read_register(pilot_io16_register_t reg, int count, uint8_t *value)
+int pilot_$io16.Name$_read_register(pilot_io16_register_t reg, int count, uint8_t *value)
 {
   uint16_t miso;
   uint8_t address_byte;
@@ -124,7 +124,7 @@ int rpc_$io16.Name$_read_register(pilot_io16_register_t reg, int count, uint8_t 
 \}
 
 /* gets the direction of the io */
-int rpc_$io16.Name$_get_direction(uint8_t io, pilot_io16_direction_t *direction)
+int pilot_$io16.Name$_get_direction(uint8_t io, pilot_io16_direction_t *direction)
 {
   pilot_io16_register_t reg;
   uint8_t reg_value, mask;
@@ -136,7 +136,7 @@ int rpc_$io16.Name$_get_direction(uint8_t io, pilot_io16_direction_t *direction)
   else
     return 0;
 
-  if (!rpc_$io16.Name$_read_register(reg, 1, &reg_value))
+  if (!pilot_$io16.Name$_read_register(reg, 1, &reg_value))
     return 0;
 
   if ( io < 4 || (io >= 8 && io < 12) )
@@ -151,7 +151,7 @@ int rpc_$io16.Name$_get_direction(uint8_t io, pilot_io16_direction_t *direction)
   return 1;
 \}
 
-int rpc_$io16.Name$_get_value(uint8_t io, uint8_t *value)
+int pilot_$io16.Name$_get_value(uint8_t io, uint8_t *value)
 {
   int ret;
   pilot_io16_register_t reg;
@@ -159,7 +159,7 @@ int rpc_$io16.Name$_get_value(uint8_t io, uint8_t *value)
   pilot_io16_direction_t direction;
 
   /* first get the direction of io */
-  ret = rpc_$io16.Name$_get_direction(io, &direction);
+  ret = pilot_$io16.Name$_get_direction(io, &direction);
 
   if (ret)
   {
@@ -188,7 +188,7 @@ int rpc_$io16.Name$_get_value(uint8_t io, uint8_t *value)
     if (ret)
     {
       /* read the register value */
-      ret = rpc_$io16.Name$_read_register(reg, 1, &reg_value);
+      ret = pilot_$io16.Name$_read_register(reg, 1, &reg_value);
       if (ret)
       {
         /* set the values */
@@ -202,12 +202,12 @@ int rpc_$io16.Name$_get_value(uint8_t io, uint8_t *value)
   return ret;
 \}
 
-uint8_t rpc_$io16.Name$_get_byte(pilot_io16_register_t reg)
+uint8_t pilot_$io16.Name$_get_byte(pilot_io16_register_t reg)
 {
   int ret;
   uint8_t reg_value;
 
-  ret = rpc_$io16.Name$_read_register(reg, 1, &reg_value);
+  ret = pilot_$io16.Name$_read_register(reg, 1, &reg_value);
   if (ret)
     return reg_value;
 
@@ -216,7 +216,7 @@ uint8_t rpc_$io16.Name$_get_byte(pilot_io16_register_t reg)
 
 
 /* wrapper function for setting the direction of a single io block */
-int rpc_$io16.Name$_set_direction(pilot_io16_block_t block, pilot_io16_direction_t direction)
+int pilot_$io16.Name$_set_direction(pilot_io16_block_t block, pilot_io16_direction_t direction)
 {
   int ret;
   pilot_io16_register_t reg;
@@ -242,7 +242,7 @@ int rpc_$io16.Name$_set_direction(pilot_io16_block_t block, pilot_io16_direction
 
   /* first read current directions of the pins */
   if (ret)
-    ret = rpc_$io16.Name$_read_register(reg, 1, &reg_value);
+    ret = pilot_$io16.Name$_read_register(reg, 1, &reg_value);
 
   if (ret)
   {
@@ -254,14 +254,14 @@ int rpc_$io16.Name$_set_direction(pilot_io16_block_t block, pilot_io16_direction
       reg_value |= update;
 
     /* write back the register value */
-    ret = rpc_$io16.Name$_write_register(reg, 1, &reg_value);
+    ret = pilot_$io16.Name$_write_register(reg, 1, &reg_value);
   \}
 
   return ret;
 \}
 
 /* wrapper function for setting the value of a single output */
-int rpc_$io16.Name$_set_value(pilot_output_target_t output, uint8_t value)
+int pilot_$io16.Name$_set_value(pilot_output_target_t output, uint8_t value)
 {
   int ret;
   pilot_io16_register_t reg;
@@ -273,7 +273,7 @@ int rpc_$io16.Name$_set_value(pilot_output_target_t output, uint8_t value)
   reg = output < 8 ? pilot_io16_register_output_register_A : pilot_io16_register_output_register_B;
 
   /* first read the current output values that the specific output belongs to */
-  ret = rpc_$io16.Name$_read_register(reg, 1, &reg_value);
+  ret = pilot_$io16.Name$_read_register(reg, 1, &reg_value);
 
   if (ret)
   {
@@ -285,60 +285,60 @@ int rpc_$io16.Name$_set_value(pilot_output_target_t output, uint8_t value)
       reg_value &= ~update;
 
     /* write back the updated register value */
-    ret = rpc_$io16.Name$_write_register(reg, 1, &reg_value);
+    ret = pilot_$io16.Name$_write_register(reg, 1, &reg_value);
   \}
 
   return ret;
 \}
 
 /* wrapper function for setting the value of a nibble (not byte!) */
-void rpc_$io16.Name$_set_byte(pilot_io16_register_t reg, uint8_t value)
+void pilot_$io16.Name$_set_byte(pilot_io16_register_t reg, uint8_t value)
 {
   int ret;
 
-  ret = rpc_$io16.Name$_write_register(reg, 1, &value);
+  ret = pilot_$io16.Name$_write_register(reg, 1, &value);
   /* todo report error */
 \}
 
 /* enables/disables the interrupt on input changes */
-static int rpc_$io16.Name$_set_input_change_irq_enable(uint8_t enable)
+static int pilot_$io16.Name$_set_input_change_irq_enable(uint8_t enable)
 {
   int ret;
   uint8_t value = enable ? 0xFF : 0;
 
   /* enable / disable interrupt for IOs 0-7  */
-  ret = rpc_$io16.Name$_write_register(pilot_io16_register_irq_enable_inputchange_A, 1, &value);
+  ret = pilot_$io16.Name$_write_register(pilot_io16_register_irq_enable_inputchange_A, 1, &value);
 
   /* enable / disable interrupt for IOs 8-15 */
   if (ret)
-    ret = rpc_$io16.Name$_write_register(pilot_io16_register_irq_enable_inputchange_B, 1, &value);
+    ret = pilot_$io16.Name$_write_register(pilot_io16_register_irq_enable_inputchange_B, 1, &value);
 
   return ret;
 \}
 
-static int rpc_$io16.Name$_set_io_filter_bypass_enable(uint8_t enable)
+static int pilot_$io16.Name$_set_io_filter_bypass_enable(uint8_t enable)
 {
   int ret;
   uint8_t value = enable ? 0x88 : 0x00;
 
   /* enable / disable io filter bypass for pins 0-7 */
-  ret = rpc_$io16.Name$_write_register(pilot_io16_register_controlword_1A, 1, &value);
+  ret = pilot_$io16.Name$_write_register(pilot_io16_register_controlword_1A, 1, &value);
 
   /* enable / disable io filter bypass for pins 8-15 */
   if (ret)
-    ret = rpc_$io16.Name$_write_register(pilot_io16_register_controlword_1B, 1, &value);
+    ret = pilot_$io16.Name$_write_register(pilot_io16_register_controlword_1B, 1, &value);
 
   return ret;
 \}
 
-int rpc_$io16.Name$_set_irq_handled()
+int pilot_$io16.Name$_set_irq_handled()
 {
   uint8_t value = 0x80;
   /* reset EOI in in controlword 4 to reset the interrupt 1 0 0 0 0 0 0 0 */
-  return rpc_$io16.Name$_write_register(pilot_io16_register_controlword_4, 1, &value);
+  return pilot_$io16.Name$_write_register(pilot_io16_register_controlword_4, 1, &value);
 \}
 
-static void rpc_$io16.Name$_init_exti()
+static void pilot_$io16.Name$_init_exti()
 {
   EXTI_InitTypeDef exti;
 
@@ -358,7 +358,7 @@ static void rpc_$io16.Name$_init_exti()
 
 \}
 
-static void rpc_$io16.Name$_init_nvic()
+static void pilot_$io16.Name$_init_nvic()
 {
   /* enable and set EXTI Line Interrupt */
   NVIC_InitTypeDef nvic;
@@ -369,7 +369,7 @@ static void rpc_$io16.Name$_init_nvic()
   NVIC_Init(&nvic);
 \}
 
-static void rpc_$io16.Name$_init_gpio()
+static void pilot_$io16.Name$_init_gpio()
 {
   GPIO_InitTypeDef gpio;
 
@@ -392,23 +392,23 @@ static void rpc_$io16.Name$_init_gpio()
 
 \}
 
-void rpc_$io16.Name$_init()
+void pilot_$io16.Name$_init()
 {
   /* configure the interrupt pin */
-  rpc_$io16.Name$_init_gpio();
+  pilot_$io16.Name$_init_gpio();
 
   /* configure the interrupt on the stm for the io16 module */
-  rpc_$io16.Name$_init_exti();
-  rpc_$io16.Name$_init_nvic();
+  pilot_$io16.Name$_init_exti();
+  pilot_$io16.Name$_init_nvic();
 
   /* enable the io filter bypass */
-  rpc_$io16.Name$_set_io_filter_bypass_enable(1);
+  pilot_$io16.Name$_set_io_filter_bypass_enable(1);
 
   /* reset the interrupt if it is already on */
-  rpc_$io16.Name$_set_irq_handled();
+  pilot_$io16.Name$_set_irq_handled();
 
   /* enable the interrupt on the io16 module */
-  rpc_$io16.Name$_set_input_change_irq_enable(1);
+  pilot_$io16.Name$_set_input_change_irq_enable(1);
 
   /* pull the chip select high to disable transfer */
   //GPIO_WriteBit($io16.SPI.NssPin.GPIO$, $io16.SPI.NssPin.Pin$, Bit_SET);

@@ -2,7 +2,7 @@
 
 $model.OneWires: {ow|
 
-void rpc_$ow.Name$_init_clocks()
+void pilot_$ow.Name$_init_clocks()
 {
   /* enable the gpio clocks */
 #ifdef STM32F4XX
@@ -12,7 +12,7 @@ void rpc_$ow.Name$_init_clocks()
 #endif
 \}
 
-void rpc_$ow.Name$_init_gpio()
+void pilot_$ow.Name$_init_gpio()
 {
   GPIO_InitTypeDef gpio;
 
@@ -31,24 +31,24 @@ void rpc_$ow.Name$_init_gpio()
 
 \}
 
-void rpc_$ow.Name$_init() 
+void pilot_$ow.Name$_init() 
 {
   /* enable the clocks */
-  rpc_$ow.Name$_init_clocks();
+  pilot_$ow.Name$_init_clocks();
 
   /* initialize the ENABLE pin */
-  rpc_$ow.Name$_init_gpio();
+  pilot_$ow.Name$_init_gpio();
 
   /* enable the one wire module */
-  rpc_$ow.Name$_set_enable(1);
+  pilot_$ow.Name$_set_enable(1);
 \}
 
-void rpc_$ow.Name$_set_enable(int enable)
+void pilot_$ow.Name$_set_enable(int enable)
 {
   GPIO_WriteBit($ow.EnableGpio$, $ow.EnablePin$, enable ? Bit_SET : Bit_RESET);
 \}
 
-int rpc_$ow.Name$_get_enable()
+int pilot_$ow.Name$_get_enable()
 {
   return (GPIO_ReadOutputDataBit($ow.EnableGpio$, $ow.EnablePin$) == Bit_SET) ? 1 : 0;
 \}

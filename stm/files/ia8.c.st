@@ -18,7 +18,7 @@ d2 d1 d0 channel
 1  1  1       7
 */
 
-void rpc_$ia8.Name$_get_value(int input_index, uint16_t* value)
+void pilot_$ia8.Name$_get_value(int input_index, uint16_t* value)
 {
   uint8_t b1, b2;
 
@@ -43,7 +43,7 @@ void rpc_$ia8.Name$_get_value(int input_index, uint16_t* value)
 \}
 
 $if(model.PLC)$
-void rpc_$ia8.Name$_get_values(int input_index, int count, uint16_t* value, int minDelta)
+void pilot_$ia8.Name$_get_values(int input_index, int count, uint16_t* value, int minDelta)
 {
   uint8_t b1, b2, i;
   uint16_t val;

@@ -10,6 +10,9 @@ void DWT_CycCounterEn();
 void DWT_CycCounterDis();
 void pilot_delay_ms(__IO int32_t milliseconds);
 
+uint64_t GetCycleCount64();
+uint64_t GetCycleCountDisableInterrupt64();
+
 __STATIC_INLINE uint32_t DWT_CycCounterRead() {
   return DWT->CYCCNT;
 }

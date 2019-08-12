@@ -40,7 +40,7 @@ typedef enum
   pilot_cmd_parity_odd
 } pilot_cmd_parity_t;
 
-static pilot_cmd_baudrate_t rpc_stm_proto_int_to_baudrate(int value)
+static pilot_cmd_baudrate_t pilot_stm_proto_int_to_baudrate(int value)
 {
   pilot_cmd_baudrate_t baudrate;
 

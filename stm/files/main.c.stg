@@ -19,14 +19,14 @@ m(name) ::= "m_<name>"
 
 usart_callback(usart) ::= <<
 /* gets called by the interrupt handler for <usart.Name> */
-void rpc_<usart.Name>_receive()
+void pilot_<usart.Name>_receive()
 {
   uint16_t data;
 
   if (USART_GetITStatus(<usart.Name>, USART_IT_RXNE) != RESET)
   {
     /* receive from the <usart.Name> */
-    data = rpc_<usart.Name>_receive_char();
+    data = pilot_<usart.Name>_receive_char();
 
     /* enqueue the data in usart send2rpi queue */
     pilot_comm_enqueue_usart(get_spi_data(target_t_from_module_slot_and_port(<usart.ModuleSlot>, <usart.ModulePort>), data));
@@ -70,25 +70,13 @@ Render(model) ::= <<
 #include "fpga.h"
 #include "aio20.h"
 #include "main.h"
-
-typedef struct {
-    long int tv_sec;            /* Seconds.  */
-    long int tv_nsec;           /* Nanoseconds.  */
-} /* __attribute__((packed)) */ IEC_TIMESPEC;  /* packed is gcc specific! */
+#include "printf.h"
 
 IEC_TIMESPEC __CURRENT_TIME;
 
 unsigned long long __tick;
 
-/* cycle time */
-unsigned int cycle_current; // time for the full cycle
-unsigned int cycle_current_comm; //time until comm done
-unsigned int cycle_current_read; //time until read
-unsigned int cycle_current_program; //time for program
-unsigned int cycle_current_write; //time until write
-
-unsigned int cycle_min;
-unsigned int cycle_max;
+cycletimes_t cycles;
 
 // plc_state
 int plc_state;
@@ -136,7 +124,7 @@ printf ("SCB_SHCSR = %x\n", SCB->SHCSR);
 while (1);
 }
 /* init systick interrupt */
-static void rpc_systick_init()
+static void pilot_systick_init()
 {
 int priority;
 
@@ -151,7 +139,7 @@ priority = NVIC_EncodePriority(NVIC_PriorityGroup_0, 0, 2);
 NVIC_SetPriority(SysTick_IRQn, priority);
 }
 
-static void rpc_send_startup_message()
+static void pilot_send_startup_message()
 {
 printf("Pilot firmware version: <model.CodeGen.Version>\r\n");
   printf("Build Date: <model.CodeGen.Date>\r\n");
@@ -208,18 +196,12 @@ static void pilot_send_eeprom_uids()
     pilot_eeprom_get_module_hid((module_slot_t)i, &hid);
 
     /* module X: OK*/
-    printf("module ");
-    _putchar(i + 0x31);
-    printf(": ");
-    printf(presence ? "OK" : "  ");
-    printf(" '");
-    _putchars((char*)hid.data, EEPROM_HID_LENGTH);
-    printf("'\r\n");
+    printf("module %d: %s '%.7s'\r\n", i, presence ? "OK" : "  ", hid.data);
   }
 }
 
 volatile int module_inputs_changed = -1;
-static void rpc_handle_module_inputs_changed()
+static void pilot_handle_module_inputs_changed()
 {
   int slot;
 
@@ -234,7 +216,7 @@ static void rpc_handle_module_inputs_changed()
     {
 <model.IO16s:{io16|
       case <io16.Slot>:
-        rpc_<io16.Name>_set_irq_handled();
+        pilot_<io16.Name>_set_irq_handled();
         break;
 };separator="\n">
     }
@@ -249,54 +231,56 @@ void initialize_tick()
   __tick = 0ULL;
 
   /* cycle time */
-  cycle_current = 0; // time for the full cycle
-  cycle_current_comm = 0; //time until comm done
-  cycle_current_read = 0; //time until read
-  cycle_current_program = 0; //time for program
-  cycle_current_write = 0; //time until write
-
-  cycle_min = UINT_MAX;
-  cycle_max = 0;
+  cycles.cycle_min = UINT_MAX;
 
   // plc_state
   plc_state = 1;
 }
 
 static void pilot_main_loop()
-{ 
+{
+  uint64_t cycle_start;
   while(1)
   {
-    DWT_CycCounterClear();
+    //DWT_CycCounterClear();
+    cycle_start = GetCycleCount64();
 
     pilot_handle_received_data();
     rpc_handle_module_inputs_changed();
 
     //communication time
-    cycle_current_comm = DWT_CycCounterRead();
+    cycles.cycle_current_comm = GetCycleCount64();
 
     //if plc is enabled, run plc code
     if (plc_state == 1)
     {
       //read inputs
       plc_read_inputs();
-      cycle_current_read = DWT_CycCounterRead();
+      cycles.cycle_current_read = GetCycleCount64();
 
       //run code
-      plc_run(__tick);
-      cycle_current_program = DWT_CycCounterRead();
+      plc_run(cycles.cycle_current_read);
+      cycles.cycle_current_program = GetCycleCount64();
 
       //write outputs
       plc_write_outputs();
-      cycle_current_write = DWT_CycCounterRead();
+      cycles.cycle_current_write = GetCycleCount64();
 
       //handle subscriptions
       pilot_comm_send_subscribed_plc_variable(plc_find_next_updated_variable());
     }
+    else 
+    {
+      cycles.cycle_current_read = 0;
+      cycles.cycle_current_program = 0;
+      cycles.cycle_current_write = 0;
+    }
 
     //update cycle time
-    cycle_current = DWT_CycCounterRead();
-    if (cycle_min > cycle_current) cycle_min = cycle_current;
-    if (cycle_max \< cycle_current) cycle_max = cycle_current;
+    cycles.cycle_start = cycle_start; //value is used in pilot_handle_received_data / communication. Save the offset for that.
+    cycles.cycle_current = GetCycleCount64() - cycles.cycle_start;
+    if (cycles.cycle_min > cycles.cycle_current) cycles.cycle_min = cycles.cycle_current;
+    if (cycles.cycle_max \< cycles.cycle_current) cycles.cycle_max = cycles.cycle_current;
   }
 }
 
@@ -308,11 +292,8 @@ int main(void)
   /* make sure SystemCoreClock is updated */
   SystemCoreClockUpdate();
 
-  DWT_Enable(); //activate DWT-unit
-  DWT_CycCounterEn(); // enable CPU cycle counter
-
   /* enable the systick interrupt */
-  rpc_systick_init();
+  pilot_systick_init();
 
   /* initializes USART1 for debug messages */
   pilot_usart_init();
@@ -321,7 +302,7 @@ int main(void)
   pilot_comm_init();
 
   /* send a message over rs232 to rpi's /dev/ttyAMA0 */
-  rpc_send_startup_message();
+  pilot_send_startup_message();
 
   /* initialize communication with the eeproms */
   pilot_eeprom_init();
@@ -332,6 +313,9 @@ int main(void)
   /* enable the rtc */
   rtc_init();
 
+  DWT_Enable(); //activate DWT-unit
+  DWT_CycCounterEn(); // enable CPU cycle counter
+
 <if(model.SPIs)>
   /* initialize spi */
   pilot_spi_setup();
@@ -339,7 +323,7 @@ int main(void)
 
 <if(model.Usarts)>
   /* initialize usarts */
-  <model.Usarts:{usart|rpc_<usart.Name>_init();};separator="\n">
+  <model.Usarts:{usart|pilot_<usart.Name>_init();};separator="\n">
 <endif>
   
 <if(model.Pwms)>
@@ -364,12 +348,12 @@ int main(void)
 
 <if(model.GPSs)>
   /* initialize the gps */
-  <model.GPSs:{gps|rpc_<gps.Name>_init();};separator="\n">
+  <model.GPSs:{gps|pilot_<gps.Name>_init();};separator="\n">
 <endif>
 
 <if(model.LORAs)>
   /* initialize the lora */
-  <model.LORAs:{lora|rpc_<lora.Name>_init();};separator="\n">
+  <model.LORAs:{lora|pilot_<lora.Name>_init();};separator="\n">
 <endif>
 
 <if (model.GSMs)>
@@ -379,12 +363,12 @@ int main(void)
 
 <if(model.IO16s)>
   /* initialize the io16 */
-  <model.IO16s:{io16|rpc_<io16.Name>_init();};separator="\n">
+  <model.IO16s:{io16|pilot_<io16.Name>_init();};separator="\n">
 <endif>
 
 <if(model.OneWires)>
   /* intialize the one wire */
-  <model.OneWires:{ow|rpc_<ow.Name>_init();};separator="\n">
+  <model.OneWires:{ow|pilot_<ow.Name>_init();};separator="\n">
 <endif>
 
 <if(model.SLCDs)>
@@ -423,12 +407,12 @@ void pilot_systick()
 {
   /* increment tick counter */
   __tick++;
-  __CURRENT_TIME.tv_nsec += 1000000L;
-  if (__CURRENT_TIME.tv_nsec >= 1000000000L)
-  {
-    __CURRENT_TIME.tv_nsec = 0;
-    __CURRENT_TIME.tv_sec++;
-  }
+  //__CURRENT_TIME.tv_nsec += 1000000L;
+  //if (__CURRENT_TIME.tv_nsec >= 1000000000L)
+  //{
+  //  __CURRENT_TIME.tv_nsec = 0;
+  //  __CURRENT_TIME.tv_sec++;
+  //}
 
   /* increment the timeout counter */
   pilot_comm_increment_cmd_timeout();
@@ -436,7 +420,7 @@ void pilot_systick()
 
 <if(model.IO16s)>
 /* define io16 input changed irq callback */
-void rpc_io16_input_changed(int slot)
+void pilot_io16_input_changed(int slot)
 {
   module_inputs_changed = slot;
 }
@@ -448,7 +432,7 @@ void rpc_io16_input_changed(int slot)
 <endif>
 
 /* gets called by the interrupt handler when a counter needs to be incremented */
-void rpc_counter_increment(int counter)
+void pilot_counter_increment(int counter)
 {
   /* increment the counter */
   <model.counter8s:{counter8|

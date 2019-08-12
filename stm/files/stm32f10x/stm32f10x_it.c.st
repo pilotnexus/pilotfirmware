@@ -304,7 +304,7 @@ static void check_io16_input_changed(uint32_t extiLine, int slot)
   if (EXTI_GetITStatus(extiLine))
   {
     /* inform the rpi that an input changed */
-    rpc_io16_input_changed(slot);
+    pilot_io16_input_changed(slot);
 
     /* mark the interrupt as handled */
     EXTI_ClearITPendingBit(extiLine);
@@ -355,7 +355,7 @@ static void check_counter_increment(uint32_t extiLine, int counter, GPIO_TypeDef
 
     /* if it's high, than increment the counter */
     if (gpio_state)
-      rpc_counter_increment(counter);
+      pilot_counter_increment(counter);
 
     /* mark the interrupt as handled */
     EXTI_ClearITPendingBit(extiLine);
@@ -554,7 +554,7 @@ void SPI2_IRQHandler(void)
 $model.Usarts:{usart|
 void $usart.Name$_IRQHandler(void)
 {
-  rpc_$usart.Name$_receive();
+  pilot_$usart.Name$_receive();
 \}
 };separator="\n"$
 

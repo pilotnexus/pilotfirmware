@@ -1,5 +1,5 @@
-﻿#ifndef __RPC_SPI_H__
-#define __RPC_SPI_H__
+﻿#ifndef __PILOT_SPI_H__
+#define __PILOT_SPI_H__
 
 #include "stm32_conf.h"
 #include <stdbool.h>

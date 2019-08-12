@@ -14,7 +14,7 @@ MEMORY
 {
     flash (rx) : ORIGIN = 0x08000000, LENGTH = 512k
     plc  (rwx) : ORIGIN = 0x20000000, LENGTH = 1k      /* Change - make dynamic */
-    ram  (rwx) : ORIGIN = 0x20000400, LENGTH = 48k
+    ram  (rwx) : ORIGIN = 0x20000400, LENGTH = 47k
 }
 
 ENTRY(Reset_Handler)

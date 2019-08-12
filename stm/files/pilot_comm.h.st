@@ -1,5 +1,5 @@
-#ifndef RPC_pilot_comm_H
-#define RPC_pilot_comm_H
+#ifndef PILOT_pilot_comm_H
+#define PILOT_pilot_comm_H
 
 #include <string.h>
 #include "common_base.h"

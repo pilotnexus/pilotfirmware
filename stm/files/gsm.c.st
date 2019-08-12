@@ -83,10 +83,10 @@ void pilot_$gsm.Name$_init()
   pilot_$gsm.Name$_gpio_init();
 
   /* initialize the usart */
-  rpc_$gsm.Usart.Name$_init();
+  pilot_$gsm.Usart.Name$_init();
 
   /* configure the usart for gsm usage */
-  rpc_$gsm.Usart.Name$_set_baudrate(9600);
+  pilot_$gsm.Usart.Name$_set_baudrate(9600);
 
   /* enable the gsm */
   //pilot_$gsm.Name$_set_enable(true);
