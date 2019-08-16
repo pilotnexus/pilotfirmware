@@ -259,7 +259,7 @@ static void pilot_main_loop()
       cycles.cycle_current_read = GetCycleCount64();
 
       //run code
-      plc_run(cycles.cycle_current_read);
+      plc_run(cycles.cycle_current_read / (<model.ClockSpeed> / 1000000));
       cycles.cycle_current_program = GetCycleCount64();
 
       //write outputs
@@ -391,7 +391,7 @@ int main(void)
 <endif>
 
   //init plc
-  plc_init();
+  plc_internal_init();
 
   printf("entering main loop.");
 

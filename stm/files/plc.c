@@ -1,17 +1,15 @@
 #include "plc.h"
-#include "plc_memory.h"
 
-extern plc_dev_t plc_mem_devices;
 void plc_read_inputs()
 {
-  plc_dev_to_mem();
-  plc_mem_to_var();
 }
 
 void plc_write_outputs() 
 {
-  plc_var_to_mem();
-  plc_mem_to_dev();
+}
+
+void plc_internal_init()
+{
 }
 
 #ifndef EXTERNAL_PLC
@@ -21,9 +19,9 @@ void config_init__() {}
 
 void plc_init() {}
 
-void plc_run(uint64_t tick)
+void plc_run(uint64_t tick_us)
 {
-  config_run__(tick);
+  config_run__(tick_us);
 }
 
 void plc_mem_to_var() {}

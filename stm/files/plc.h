@@ -12,9 +12,10 @@
 #define PLC_VAR_UNSUBSCRIBE_BIT   0x4000
 
 void plc_init();
+void plc_internal_init();
 void plc_read_inputs();
 void plc_write_outputs();
-void plc_run(uint64_t tick);
+void plc_run(uint64_t tick_us);
 void plc_init_modules(void);
 void plc_mem_to_var();
 void plc_var_to_mem();
