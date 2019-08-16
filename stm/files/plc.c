@@ -13,9 +13,8 @@ void config_init__() {}
 
 void plc_init() {}
 
-void plc_run(uint64_t tick)
+void plc_run(uint64_t tick_us)
 {
-  config_run__(tick);
 }
 
 void plc_mem_to_var() {}

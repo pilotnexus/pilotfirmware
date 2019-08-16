@@ -32,17 +32,21 @@ int pilot_$io16.Name$_write_register(pilot_io16_register_t reg, int count, uint8
       ret = 0;
     else
     {
-      for (i=0;i<count,ret>0;i++)
+      for (i=0;i<count && ret>0;i++)
       {
         /* send the data to write to the chip */
         miso = pilot_spi_dataexchange(spi_id_$io16.SPI.Id$, *value);
 
         /* check of the chip answered with the count */
-        if ( (i == 0) && (miso != get_mosi_count(count)) )
-          ret = 0;
+        if (i == 0) 
+        {
+          if (miso != get_mosi_count(count))
+            ret = 0;
+        \}
         else if (i >= (count-1) )
         {
           /* send the end address */
+          address_byte = get_mosi_address(0, (int)(reg+count-1), 0);
           miso = pilot_spi_dataexchange(spi_id_$io16.SPI.Id$, address_byte);
 
           /* check if the chip returned the data */
