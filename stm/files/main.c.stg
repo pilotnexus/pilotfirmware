@@ -246,7 +246,7 @@ static void pilot_main_loop()
     cycle_start = GetCycleCount64();
 
     pilot_handle_received_data();
-    rpc_handle_module_inputs_changed();
+    pilot_handle_module_inputs_changed();
 
     //communication time
     cycles.cycle_current_comm = GetCycleCount64();
@@ -391,7 +391,7 @@ int main(void)
 <endif>
 
   //init plc
-  plc_init();
+  plc_internal_init();
 
   printf("entering main loop.");
 
