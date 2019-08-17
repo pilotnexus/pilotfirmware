@@ -4,7 +4,7 @@ void plc_read_inputs() { }
 
 void plc_write_outputs() { }
 
-plc_internal_init() {}
+void plc_internal_init() {}
 
 #ifndef EXTERNAL_PLC
 
