@@ -1,8 +1,8 @@
 #include "plc.h"
 
-void plc_read_inputs() { }
+void plc_read_inputs() {}
 
-void plc_write_outputs() { }
+void plc_write_outputs() {}
 
 void plc_internal_init() {}
 

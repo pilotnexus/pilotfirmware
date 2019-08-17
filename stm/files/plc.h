@@ -11,7 +11,6 @@
 #define PLC_VAR_SUBSCRIBE_BIT     0x8000
 #define PLC_VAR_UNSUBSCRIBE_BIT   0x4000
 
-plc_internal_init();
 void plc_init();
 void plc_internal_init();
 void plc_read_inputs();
