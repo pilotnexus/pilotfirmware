@@ -271,9 +271,9 @@ static void pilot_main_loop()
     }
     else 
     {
-      cycles.cycle_current_read = 0;
-      cycles.cycle_current_program = 0;
-      cycles.cycle_current_write = 0;
+      cycles.cycle_current_read = cycles.cycle_current_comm;
+      cycles.cycle_current_program = cycles.cycle_current_comm;
+      cycles.cycle_current_write = cycles.cycle_current_comm;
     }
 
     //update cycle time
@@ -295,6 +295,9 @@ int main(void)
   /* enable the systick interrupt */
   pilot_systick_init();
 
+  DWT_Enable(); //activate DWT-unit
+  DWT_CycCounterEn(); // enable CPU cycle counter
+
   /* initializes USART1 for debug messages */
   pilot_usart_init();
 
@@ -312,9 +315,6 @@ int main(void)
 
   /* enable the rtc */
   rtc_init();
-
-  DWT_Enable(); //activate DWT-unit
-  DWT_CycCounterEn(); // enable CPU cycle counter
 
 <if(model.SPIs)>
   /* initialize spi */

@@ -159,6 +159,8 @@ RenderBody(model) ::= <<
     ///@return Result of operation
     CmdResult single_ended_adc_read(uint8_t slot, MAX11300_Ports port, uint16_t *data);
     
+    void single_ended_adc_read_all(uint8_t slot, uint8_t *data); 
+    
     ///@brief Write single ended DAC configured port
     ///@param[in] port - single ended DAC configured port
     ///@param[in] data - value to be written to DAC data register

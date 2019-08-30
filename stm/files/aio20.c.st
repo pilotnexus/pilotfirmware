@@ -286,6 +286,20 @@ CmdResult single_ended_adc_read(uint8_t slot, MAX11300_Ports port, uint16_t *dat
     return result;
 }
 
+void single_ended_adc_read_all(uint8_t slot, uint8_t *data)
+{
+    int i;
+    pilot_spi_set_cs(slot_to_spi[slot], chip_select_enable);
+    pilot_spi_dataexchange(slot_to_spi[slot], MAX11300Addr_SPI_Read(adc_data_port_00));
+    for(i = 0; i < 20; i++)
+    {
+      *(data + 1) = pilot_spi_dataexchange(slot_to_spi[slot], 0x0); 
+      *data = pilot_spi_dataexchange(slot_to_spi[slot], 0x0); 
+      data+=2;
+    }
+    pilot_spi_set_cs(slot_to_spi[slot], chip_select_disable);
+}
+
 //*********************************************************************
 CmdResult single_ended_dac_write(uint8_t slot, MAX11300_Ports port, uint16_t data)
 {
