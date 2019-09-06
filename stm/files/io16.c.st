@@ -43,7 +43,7 @@ int pilot_$io16.Name$_write_register(pilot_io16_register_t reg, int count, uint8
           if (miso != get_mosi_count(count))
             ret = 0;
         \}
-        else if (i >= (count-1) )
+        if (i >= (count-1) )
         {
           /* send the end address */
           address_byte = get_mosi_address(0, (int)(reg+count-1), 0);
@@ -323,7 +323,7 @@ static int pilot_$io16.Name$_set_input_change_irq_enable(uint8_t enable)
 static int pilot_$io16.Name$_set_io_filter_bypass_enable(uint8_t enable)
 {
   int ret;
-  uint8_t value = enable ? 0x88 : 0x00;
+  uint8_t value = enable ? 0x88 : 0x44;
 
   /* enable / disable io filter bypass for pins 0-7 */
   ret = pilot_$io16.Name$_write_register(pilot_io16_register_controlword_1A, 1, &value);
