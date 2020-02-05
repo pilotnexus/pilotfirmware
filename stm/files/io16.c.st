@@ -37,52 +37,38 @@ int pilot_$io16.Name$_write_register(pilot_io16_register_t reg, int count, uint8
         /* send the data to write to the chip */
         miso = pilot_spi_dataexchange(spi_id_$io16.SPI.Id$, *value);
 
-        /* the chip should have answered by returning the address */
-        if (address_byte != miso)
-          ret = 0;
-        else
+        /* check of the chip answered with the count */
+        if (i == 0) 
         {
-          for (i=0; i<count && ret>0; i++)
+          if (miso != get_mosi_count(count))
+            ret = 0;
+        \}
+        else if (i < count-1) /* not the last byte to send, and not the first, check with previous byte */
+        {
+          if (miso != *(value-1))
+            ret = 0;
+        \}
+        if (i == count-1) /* last byte */
+        {
+          /* send the end address */
+          address_byte = get_mosi_address(0, (int)(reg+count-1), 0);
+          miso = pilot_spi_dataexchange(spi_id_$io16.SPI.Id$, address_byte);
+
+          /* check if the chip returned the data */
+          if (miso != *value)
+            ret = 0;
+          else
           {
-            /* send the data to write to the chip */
-            miso = pilot_spi_dataexchange(spi_id_$io16.SPI.Id$, *value);
+            /* send the CTRL byte to the chip */
+            miso = pilot_spi_dataexchange(spi_id_$io16.SPI.Id$, CTRL);
 
-            /* first byte */
-            if (i == 0)
-            {
-              if (miso != get_mosi_count(count))
-                ret = 0;
-            \}
-            else if (i < count-1) /* not the last byte to send, and not the first, check with previous byte */
-            {
-              if (miso != *(value-1))
-                ret = 0;
-            \}
-            else /* last byte */
-            {
-              /* send the end address */
-              address_byte = get_mosi_address(0, (int)(reg+count-1), 0);
-              miso = pilot_spi_dataexchange(spi_id_$io16.SPI.Id$, address_byte);
-
-              /* check if the chip returned the data */
-              if (miso != *value)
-                ret = 0;
-              else
-              {
-                /* send the CTRL byte to the chip */
-                miso = pilot_spi_dataexchange(spi_id_$io16.SPI.Id$, CTRL);
-
-                /* check if the chip returned the CTRL byte */
-                ret = (miso == CTRL) ? 1 : 0;
-              \}
-            \}
-
-            /* move to next byte */
-            value++;
+            /* check if the chip returned the CTRL byte */
+            ret = (miso == CTRL) ? 1 : 0;
           \}
         \}
-      /* move to next byte */
-      value++;
+
+        /* move to next byte */
+        value++;
       \}
     \}
 
@@ -338,7 +324,7 @@ static int pilot_$io16.Name$_set_input_change_irq_enable(uint8_t enable)
 static int pilot_$io16.Name$_set_io_filter_bypass_enable(uint8_t enable)
 {
   int ret;
-  uint8_t value = enable ? 0x88 : 0x44;
+  uint8_t value = enable ? 0x88 : 0x00;
 
   /* enable / disable io filter bypass for pins 0-7 */
   ret = pilot_$io16.Name$_write_register(pilot_io16_register_controlword_1A, 1, &value);
@@ -348,6 +334,12 @@ static int pilot_$io16.Name$_set_io_filter_bypass_enable(uint8_t enable)
     ret = pilot_$io16.Name$_write_register(pilot_io16_register_controlword_1B, 1, &value);
 
   return ret;
+\}
+
+static int pilot_$io16.Name$_set_internal_clock_enable()
+{
+  uint8_t value = 0x5;
+  return pilot_$io16.Name$_write_register(pilot_io16_register_controlword_3B, 1, &value);
 \}
 
 int pilot_$io16.Name$_set_irq_handled()
@@ -419,6 +411,9 @@ void pilot_$io16.Name$_init()
   /* configure the interrupt on the stm for the io16 module */
   pilot_$io16.Name$_init_exti();
   pilot_$io16.Name$_init_nvic();
+
+  /* enable internal clock */
+  pilot_$io16.Name$_set_internal_clock_enable();
 
   /* enable the io filter bypass */
   pilot_$io16.Name$_set_io_filter_bypass_enable(1);
