@@ -75,14 +75,24 @@ void pilot_comm_increment_cmd_timeout()
   _internals.current_cmd_timeout_counter++;
 }
 
-void pilot_enqueue_spi_tx(uint16_t data)
+bool pilot_enqueue_spi_tx(uint16_t data)
 {
-  _internals.spi_tx_array[_internals.spi_tx_end++] = data;
-  if (_internals.spi_tx_end >= TX_BUFFER_SIZE-1) //do not write the last byte, we need it as dummy (invalid transfer) byte for DMA slave
-    _internals.spi_tx_end = 0;
-  
-  if (_internals.spi_tx_end == _internals.spi_tx_start) //error! OVERFLOW
+  uint32_t nextindex = _internals.spi_tx_end + 1;
+  if (nextindex >= TX_BUFFER_SIZE) 
+    nextindex = 0;
+
+  if (nextindex == _internals.spi_tx_start) //error! OVERFLOW
+  {
     _internals.send2rpiqueue_overflow_count++;
+    return false;
+  }
+  else
+  {
+    _internals.spi_tx_array[_internals.spi_tx_end] = data; // set data to current index
+    _internals.spi_tx_end = nextindex; //and progress to the next index
+  
+    return true;
+  }
 }
 
 void pilot_comm_enqueue_usart(uint16_t data)
@@ -332,12 +342,21 @@ static void pilot_setup_spi_tx()
 //called by interrupt handler when TX transfer is completed
 void pilot_comm_spi_tx_done()
 {
-  GPIO_WriteBit(GPIO_Pin_BOARD, GPIO_Pin_DATA_M2R, Bit_RESET);
+  //GPIO_WriteBit(GPIO_Pin_BOARD, GPIO_Pin_DATA_M2R, Bit_RESET);
   DMA_ClearITPendingBit(DMA1_IT_TC3); //mark interrupt as done
   _internals.spi_tx_start = _internals.spi_tx_current_end == TX_BUFFER_SIZE ? 0 : _internals.spi_tx_current_end;
 
   SPI_I2S_DMACmd(SPI1, SPI_I2S_DMAReq_Rx, ENABLE);
   DMA_Cmd(DMA1_Channel3, DISABLE);  //disable DMA
+
+  //check if we still data to send, e.g. a circular buffer wraparound
+  if (_internals.spi_tx_start != _internals.spi_tx_end) {
+    pilot_setup_spi_tx();
+  }
+  else 
+  {
+    GPIO_WriteBit(GPIO_Pin_BOARD, GPIO_Pin_DATA_M2R, Bit_RESET);
+  }
 }
 
 /* initializes the additional gpios used in the  <-> rpi communication */
@@ -532,7 +551,7 @@ void pilot_handle_received_data()
 
   pilot_setup_spi_tx(); //setup tx DMA if data is to be sent
 
-  while (_internals.spi_rx_remain != DMA1_Channel2->CNDTR)
+  while (_internals.spi_rx_remain != cndtr)
   {
     remaining = RX_BUFFER_SIZE - _internals.spi_rx_remain;
     spidata = _internals.spi_rx_array[remaining];
@@ -1445,7 +1464,7 @@ void pilot_comm_send_subscribed_plc_variable(int plc_variable_number)
     cmd.target = target_base;
     cmd.type = pilot_cmd_type_plc_variable_get;
  
-    plc_read_from_variable(plc_variable_number, cmd.data, pilot_cmd_t_data_size);
+    plc_read_from_variable(plc_variable_number, 1, cmd.data, pilot_cmd_t_data_size);
 
     *((uint16_t *)&cmd.data[8]) = plc_variable_number | PLC_VAR_SUBSCRIBE_BIT;
 
@@ -1513,7 +1532,7 @@ static void pilot_rpi_plc_variables_get()
 /* is called when the plc variable get cmd is received */
 static void pilot_rpi_plc_variable_get(pilot_cmd_t * cmd)
 {
-  plc_read_from_variable(*((uint16_t *)&cmd->data[8]), cmd->data, pilot_cmd_t_data_size);
+  plc_read_from_variable(*((uint16_t *)&cmd->data[8]), 0, cmd->data, pilot_cmd_t_data_size);
   *((uint16_t *)&cmd->data[8]) &= 0xFFF; //remove flags for reply
 
   /* send the answer */
@@ -1524,7 +1543,7 @@ static void pilot_rpi_plc_variable_get(pilot_cmd_t * cmd)
 /* is called when the plc variable get cmd is received */
 static void pilot_rpi_plc_variable_set(pilot_cmd_t * cmd)
 {
-  plc_write_to_variable(*((uint16_t *)&cmd->data[8]), (uint8_t *)cmd->data, pilot_cmd_t_data_size);
+  plc_write_to_variable(*((uint16_t *)&cmd->data[8]), 0, (uint8_t *)cmd->data, pilot_cmd_t_data_size);
  
   /* send the answer */
   cmd->length = MSG_LEN(12); //TODO make size dynamic depending on var size
