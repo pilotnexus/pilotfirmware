@@ -35,7 +35,7 @@ $i8.Inputs:{p|
 \}
 
 /* initializes the i8 module */
-void $i8.Name$_init()
+void pilot_$i8.Name$_init()
 {
   $i8.Name$_configure_clocks();
   $i8.Name$_configure_gpios();
