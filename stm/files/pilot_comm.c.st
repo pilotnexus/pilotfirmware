@@ -744,6 +744,7 @@ static void pilot_pilot_comm_get_input_state_cmd(module_slot_t slot, uint8_t inp
   switch (slot)
   {
     $model.I8s:{i8|case $i8.Slot$: value = $i8.Name$_get_state(input); break;};separator="\n"$
+    $model.Demos:{demo|case $demo.Slot$: value = $demo.Name$_get_state(input); break;};separator="\n"$
     $model.IA8s:{ia8|case $ia8.Slot$:
       pilot_$ia8.Name$_get_value(input, &ia_value);
       value = ia_value;
@@ -767,11 +768,9 @@ static void pilot_pilot_comm_get_input_state_cmd(module_slot_t slot, uint8_t inp
   cmd->target = target_t_from_module_slot_and_port(slot, 0);
   cmd->type = pilot_cmd_type_input_get_input;
   cmd->data[(int)pilot_input_index_target] = input;
-  cmd->data[(int)pilot_input_index_value + 0] = (value >> 3*8) & 0xFF;
-  cmd->data[(int)pilot_input_index_value + 1] = (value >> 2*8) & 0xFF;
-  cmd->data[(int)pilot_input_index_value + 2] = (value >> 1*8) & 0xFF;
-  cmd->data[(int)pilot_input_index_value + 3] = (value >> 0*8) & 0xFF;
-  cmd->length = MSG_LEN(8);
+  cmd->data[(int)pilot_input_index_value + 0] = (value >> 8) & 0xFF;
+  cmd->data[(int)pilot_input_index_value + 1] = (value) & 0xFF;
+  cmd->length = MSG_LEN(4);
 }
 
 static void pilot_pilot_comm_send_input_state(module_slot_t slot, uint8_t input)
@@ -1040,6 +1039,7 @@ static void pilot_pilot_comm_set_output(module_slot_t slot, pilot_output_target_
   switch (slot)
   {
     $model.O8s:{o8|case $o8.Slot$: pilot_$o8.Name$_set_value(output, value); break;};separator="\n"$
+    $model.Demos:{demo|case $demo.Slot$: pilot_$demo.Name$_set_value(output, value); break;};separator="\n"$
     $model.IO16s:{io16|case $io16.Slot$: pilot_$io16.Name$_set_value(output, value); break;};separator="\n"$
     $model.AIO20s:{aio20|case $aio20.Slot$: single_ended_dac_write($aio20.Slot$, output, value); break;};separator="\n"$
   }
