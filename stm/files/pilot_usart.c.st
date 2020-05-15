@@ -265,7 +265,6 @@ void pilot_uart_comm() {
     //DMA_Cmd(DMA1_Channel4, DISABLE);  //disable DMA
     DMA1_Channel4->CCR &= ~DMA_CCR1_EN;      // disable DMA
     uart_internals.transmitting = false;
-    GPIO_OUT_SET(GPIOC_BASE, 11, 0);
   }
 
   //No DMA transfer in progress and data in buffer
@@ -287,7 +286,6 @@ void pilot_uart_comm() {
       else if (uart_internals.uart_tx_start > uart_internals.uart_tx_end) //wraparound, just read to end
         uart_internals.uart_tx_current_end = UART_TX_BUFFER_SIZE;
 
-      GPIO_OUT_SET(GPIOC_BASE, 11, 1);
 
       DMA1_Channel4->CPAR = (uint32_t)&USART1->DR;           // 1. Write USART_DR
       DMA1_Channel4->CMAR = (uint32_t)&uart_internals.uart_tx_array[uart_internals.uart_tx_start]; // 2. Write Memory address
@@ -313,12 +311,8 @@ void pilot_uart_transmit_done()
 {
   if (DMA_GetITStatus(DMA1_IT_TE4) != RESET) {
     DMA_ClearITPendingBit(DMA1_IT_TE4); //mark interrupt as done
-    GPIO_OUT_SET(GPIOC_BASE, 10, 1);
   }
   if (DMA_GetITStatus(DMA1_IT_TC4) != RESET) {
-    GPIO_OUT_SET(GPIOC_BASE, 11, 0);
-    //GPIO_WriteBit(GPIOC_BASE, 11, Bit_RESET);
-    //GPIO_WriteBit(GPIO_Pin_BOARD, GPIO_Pin_DATA_M2R, Bit_RESET);
     DMA_ClearITPendingBit(DMA1_IT_TC4); //mark interrupt as done
     uart_internals.uart_tx_start = uart_internals.uart_tx_current_end == UART_TX_BUFFER_SIZE ? 0 : uart_internals.uart_tx_current_end;
 
