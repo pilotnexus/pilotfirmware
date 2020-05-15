@@ -63,7 +63,7 @@ void pilot_$demo.Name$_init()
 \}
 
 /* send the state of the input to the rpi */
-uint8_t $demo.Name$_get_state(uint8_t input)
+uint8_t pilot_$demo.Name$_get_state(uint8_t input)
 {
   uint8_t state = 0;
   switch (input)

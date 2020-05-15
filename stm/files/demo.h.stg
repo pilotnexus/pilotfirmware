@@ -35,10 +35,9 @@ Demo(demo) ::= <<
 void pilot_<demo.Name>_init(void);
 
 /* send the state of the input to the rpi */
-uint8_t <demo.Name>_get_state(uint8_t input);
-<if(model.PLC)>
-void <demo.Name>_plc_read(unsigned char *target);
-<endif>
+uint8_t pilot_<demo.Name>_get_state(uint8_t input);
+uint8_t pilot_<demo.Name>_get_value(uint8_t output);
+void pilot_<demo.Name>_set_value(uint8_t output, bool value);
 >>
 
 RenderBody(model) ::= <<

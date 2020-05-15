@@ -277,6 +277,8 @@ static void pilot_main_loop()
       cycles.cycle_current_write = cycles.cycle_current_comm;
     }
 
+    pilot_uart_comm();
+    
     //update cycle time
     cycles.cycle_start = cycle_start; //value is used in pilot_handle_received_data / communication. Save the offset for that.
     cycles.cycle_current = GetCycleCount64() - cycles.cycle_start;
