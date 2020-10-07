@@ -263,7 +263,7 @@ static void pilot_main_loop(void *state)
       cycles.cycle_current_read = GetCycleCount64();
 
       //run code
-      plc_run(cycles.cycle_current_read / (<model.ClockSpeed> / 1000000));
+      plc_run(state, cycles.cycle_current_read / (<model.ClockSpeed> / 1000000));
       cycles.cycle_current_program = GetCycleCount64();
 
       //write outputs

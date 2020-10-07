@@ -17,7 +17,7 @@ void plc_init(void (*main_loop)()) {
   main_loop();
 }
 
-void plc_run(uint64_t tick_us)
+void plc_run(void *state, uint64_t tick_us)
 {
 }
 

@@ -15,7 +15,7 @@ void plc_init(void (*main_loop)(void *));
 void plc_internal_init(int *plc_state, void (*main_loop)(void *));
 void plc_read_inputs();
 void plc_write_outputs();
-void plc_run(uint64_t tick_us);
+void plc_run(void *state, uint64_t tick_us);
 void plc_init_modules(void);
 void plc_mem_to_var();
 void plc_var_to_mem();
