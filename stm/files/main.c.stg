@@ -399,7 +399,7 @@ int main(void)
 <endif>
 
   //init plc
-  plc_internal_init();
+  plc_internal_init(pilot_main_loop);
 
   printf("entering main loop.");
 
