@@ -4,14 +4,18 @@ void plc_read_inputs() {}
 
 void plc_write_outputs() {}
 
-void plc_internal_init(void (*main_loop)(void *)) {}
+void plc_internal_init(int *plc_state, void (*main_loop)(void *)) {
+  plc_init(main_loop);
+}
 
 #ifndef EXTERNAL_PLC
 
 void config_run__() {}
 void config_init__() {}
 
-void plc_init() {}
+void plc_init(void (*main_loop)()) {
+  main_loop();
+}
 
 void plc_run(uint64_t tick_us)
 {

@@ -238,9 +238,12 @@ void initialize_tick()
   plc_state = 1;
 }
 
-static void pilot_main_loop()
+static void pilot_main_loop(void *state)
 {
   uint64_t cycle_start;
+  
+  printf("entering main loop\r\n");
+
   while(1)
   {
     //DWT_CycCounterClear();
@@ -398,13 +401,8 @@ int main(void)
   pilot_test_init();
 <endif>
 
-  //init plc
-  plc_internal_init(pilot_main_loop);
-
-  printf("entering main loop.");
-
-  /* entering main loop */
-  pilot_main_loop();
+  //init plc and then start main loop
+  plc_internal_init(&plc_state, pilot_main_loop);
 }
 
 ////////////////////////////////////
