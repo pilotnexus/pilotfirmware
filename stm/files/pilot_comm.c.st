@@ -77,9 +77,20 @@ void pilot_comm_increment_cmd_timeout()
 
 bool pilot_enqueue_spi_tx(uint16_t data)
 {
+  
   uint32_t nextindex = _internals.spi_tx_end + 1;
-  if (nextindex >= TX_BUFFER_SIZE) 
-    nextindex = 0;
+  if (nextindex >= TX_BUFFER_SIZE) { //the last index needs to be a dummy byte for DMA transfer
+    _internals.spi_tx_array[_internals.spi_tx_end] = get_spi_data(target_invalid, 0x00);
+    _internals.spi_tx_end = 0;
+    nextindex = 1;
+
+    //check for overflow in this special case
+    if (_internals.spi_tx_end == _internals.spi_tx_start) //error! OVERFLOW
+    {
+      _internals.send2rpiqueue_overflow_count++;
+      return false;
+    }
+  }
 
   if (nextindex == _internals.spi_tx_start) //error! OVERFLOW
   {

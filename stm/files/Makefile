@@ -1,6 +1,21 @@
+ifeq ($(OS),Windows_NT)
+  CP := copy
+  RM := del /f /q
+  S=\\
+
+  rmdir = IF EXIST $1 rmdir $1 /s /q
+  mk = IF NOT EXIST $1 md $1
+else
+  CP := cp
+  RM := rm -f
+  S=/
+  rmdir = rm -rf $1
+  mk = mkdir -p $1
+endif
+
 DEBUG_LEVEL=3
-SRC_DIR=../src
-RUST_ASM_DIR=../tarrget/thumbv7m-none-eabi/debug/deps
+SRC_DIR=..${S}src
+RUST_ASM_DIR=..${S}tarrget${S}thumbv7m-none-eabi${S}debug${S}deps
 BUILD_DIR=build
 EXTRAFILES=
 OBJCOPY=arm-none-eabi-objcopy
@@ -18,10 +33,10 @@ SRCS=$(wildcard *.c)
 SSRCS=$(wildcard *.s)
 DEPS=$(wildcard *.h)
 OBJS = \
- $(patsubst %.s,$(BUILD_DIR)/%.o,$(SSRCS)) \
- $(patsubst %.c,$(BUILD_DIR)/%.o,$(SRCS)) \
+ $(patsubst %.s,$(BUILD_DIR)${S}%.o,$(SSRCS)) \
+ $(patsubst %.c,$(BUILD_DIR)${S}%.o,$(SRCS)) \
 
-RUST_OBJS := $(wildcard ../src/*.o)
+RUST_OBJS := $(wildcard ..${S}src${S}*.o)
 
 default: $(OBJS) 
 	$(CC) $(LDFLAGS) $(OBJS) $(RUST_OBJS) -o stm.axf
@@ -29,21 +44,20 @@ default: $(OBJS)
 
 rust: CCFLAGS+=-DEXTERNAL_PLC 
 rust: $(OBJS) 
-	$(CC) $(LDFLAGS) $(OBJS) -L../../lib/ -lpilot -o stm.axf
+	$(CC) $(LDFLAGS) $(OBJS) -L..${S}..${S}lib${S} -lpilot -o stm.axf
 	$(OBJCOPY) -O binary stm.axf stm.bin
 
 lib: $(OBJS)
 	$(AR) -r libbasefw.a $(OBJS) 
 
-$(BUILD_DIR)/%.o: %.c $(DEPS)
-	@mkdir -p $(BUILD_DIR)
-	$(CC) -c $(CCFLAGS) $*.c -o $(BUILD_DIR)/$*.o
+$(BUILD_DIR)${S}%.o: %.c $(DEPS)
+	@$(call mk, $(BUILD_DIR))
+	$(CC) -c $(CCFLAGS) $*.c -o $(BUILD_DIR)${S}$*.o
 
-$(BUILD_DIR)/%.o: %.s
-	@mkdir -p $(BUILD_DIR)
-	$(CC) -c $(CCFLAGS) $*.s -o $(BUILD_DIR)/$*.o
+$(BUILD_DIR)${S}%.o: %.s
+	@$(call mk, $(BUILD_DIR))
+	$(CC) -c $(CCFLAGS) $*.s -o $(BUILD_DIR)${S}$*.o
 
 clean:
-	rm -rf $(BUILD_DIR)
-	rm -rf $(SRC_DIR)/$(BUILD_DIR)
-	rm -rf libbasefw.a
+	$(call rmdir, $(BUILD_DIR))
+	${RM} libbasefw.a

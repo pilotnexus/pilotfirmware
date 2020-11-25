@@ -233,8 +233,11 @@ void initialize_tick()
   /* cycle time */
   cycles.cycle_min = UINT_MAX;
 
-  // plc_state
-  plc_state = 1;
+  // plc_state, if watchdog reset occured, don't start the plc loop
+  if (RCC_GetFlagStatus(RCC_FLAG_IWDGRST) || RCC_GetFlagStatus(RCC_FLAG_WWDGRST)) 
+    plc_state = 0;
+  else
+    plc_state = 1;
 }
 
 static void pilot_main_loop()
