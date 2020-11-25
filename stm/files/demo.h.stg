@@ -28,24 +28,24 @@ Render(model) ::= <<
 
 m(name) ::= "m_<name>"
 
-/* declares the i8 functions */
-I8(i8) ::= <<
+/* declares the demo functions */
+Demo(demo) ::= <<
 
-/* initializes the i8 module */
-void pilot_<i8.Name>_init(void);
+/* initializes the demo module */
+void pilot_<demo.Name>_init(void);
 
 /* send the state of the input to the rpi */
-uint8_t <i8.Name>_get_state(uint8_t input);
-<if(model.PLC)>
-void <i8.Name>_plc_read(unsigned char *target);
-<endif>
+uint8_t pilot_<demo.Name>_get_state(uint8_t input);
+uint8_t pilot_<demo.Name>_get_value(uint8_t output);
+void pilot_<demo.Name>_set_value(uint8_t output, bool value);
 >>
 
 RenderBody(model) ::= <<
 
+#include \<stdbool.h>
 #include "io_stm.h"
 
-<! functions foreach i8 module !>
-<model.I8s:{i8|<I8(i8)>};separator="\n">
+<! functions foreach demo module !>
+<model.Demos:{demo|<Demo(demo)>};separator="\n">
 
 >>

@@ -57,6 +57,7 @@ Render(model) ::= <<
 #include "pwm.h"
 #include "i8.h"
 #include "o8.h"
+#include "demo.h"
 #include "pilot_usart.h"
 #include "gps.h"
 #include "gsm.h"
@@ -240,9 +241,12 @@ void initialize_tick()
     plc_state = 1;
 }
 
-static void pilot_main_loop()
+static void pilot_main_loop(void *state)
 {
   uint64_t cycle_start;
+  
+  printf("entering main loop\r\n");
+
   while(1)
   {
     //DWT_CycCounterClear();
@@ -262,7 +266,7 @@ static void pilot_main_loop()
       cycles.cycle_current_read = GetCycleCount64();
 
       //run code
-      plc_run(cycles.cycle_current_read / (<model.ClockSpeed> / 1000000));
+      plc_run(state, cycles.cycle_current_read / (<model.ClockSpeed> / 1000000));
       cycles.cycle_current_program = GetCycleCount64();
 
       //write outputs
@@ -279,6 +283,8 @@ static void pilot_main_loop()
       cycles.cycle_current_write = cycles.cycle_current_comm;
     }
 
+    pilot_uart_comm();
+    
     //update cycle time
     cycles.cycle_start = cycle_start; //value is used in pilot_handle_received_data / communication. Save the offset for that.
     cycles.cycle_current = GetCycleCount64() - cycles.cycle_start;
@@ -336,12 +342,17 @@ int main(void)
 
 <if(model.I8s)>
   /* initialize the i8s */
-  <model.I8s:{i8|<i8.Name>_init();};separator="\n">
+  <model.I8s:{i8|pilot_<i8.Name>_init();};separator="\n">
 <endif>
 
 <if (model.O8s)>
   /* initialize the o8s */
   <model.O8s:{o8|pilot_<o8.Name>_init();};separator="\n">
+<endif>
+
+<if (model.Demos)>
+  /* initialize the Demos */
+  <model.Demos:{demo|pilot_<demo.Name>_init();};separator="\n">
 <endif>
 
 <if(model.Counter8s)>
@@ -393,13 +404,8 @@ int main(void)
   pilot_test_init();
 <endif>
 
-  //init plc
-  plc_internal_init();
-
-  printf("entering main loop.");
-
-  /* entering main loop */
-  pilot_main_loop();
+  //init plc and then start main loop
+  plc_internal_init(&plc_state, pilot_main_loop);
 }
 
 ////////////////////////////////////

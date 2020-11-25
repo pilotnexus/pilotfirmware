@@ -230,7 +230,7 @@ typedef enum {
 /* helper enum for pilot_cmd_type_input_get_input handling */
 typedef enum {
   pilot_input_index_target = 0, /* encode the input target in the first byte */
-  pilot_input_index_value  = 4  /* encode the input value in the last 4 bytes */
+  pilot_input_index_value  = 2  /* encode the input value in the last 2 bytes */
 } pilot_input_index_t;
 
 /* helper enum for pilot_cmd_type_lora_enable handling */

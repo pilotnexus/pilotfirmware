@@ -17,6 +17,7 @@ static void pilot_usart_configure_usart(void);
 #define GPIO_Pin_pilot_usart_Rx_Source GPIO_PinSource10
 #define GPIO_Pin_pilot_usart_Tx_Source GPIO_PinSource9
 
+static uart_internals_t uart_internals = {0};
 ///////////////////////////////////////
 /* START Rpi functions */
 
@@ -99,10 +100,10 @@ static void pilot_usart_configure_gpios()
 /* called by pilot_usart_init() */
 static void pilot_usart_configure_usart()
 {
-  USART_InitTypeDef usart;
+  static USART_InitTypeDef usart;
   USART_StructInit(&usart);
 
-  usart.USART_BaudRate            = 115200;
+  usart.USART_BaudRate            = 921600; //115200;
   usart.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
   usart.USART_Mode                = USART_Mode_Tx | USART_Mode_Rx;
   usart.USART_Parity              = USART_Parity_No;
@@ -111,7 +112,83 @@ static void pilot_usart_configure_usart()
 
   USART_Init(USART1, &usart);
 
+  USART_DMACmd(USART1, USART_DMAReq_Rx | USART_DMAReq_Tx, ENABLE);
   USART_Cmd(USART1, ENABLE);
+}
+
+static void uart_dma_init() 
+{
+  /* DMA UART1 RX */
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);      // Enable DMA1 clock
+
+  DMA_DeInit(DMA1_Channel5);                              // Reset DMA1 channe1 to default values;
+
+  UART_DMA_InitStructure_rx.DMA_M2M = DMA_M2M_Disable;            // M2M Disabled- Peripheral mode (requires timer trigger)
+  UART_DMA_InitStructure_rx.DMA_Mode = DMA_Mode_Circular;         // Circular mode
+  UART_DMA_InitStructure_rx.DMA_Priority = DMA_Priority_High; // High priority
+  UART_DMA_InitStructure_rx.DMA_DIR = DMA_DIR_PeripheralSRC;      // Peripheral to Memory 
+
+  UART_DMA_InitStructure_rx.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte; // 8-bit Register
+  UART_DMA_InitStructure_rx.DMA_PeripheralInc = DMA_PeripheralInc_Disable;            // Always write to same register
+  UART_DMA_InitStructure_rx.DMA_PeripheralBaseAddr = (uint32_t)&USART1->DR;           // Output data for GPIO
+
+  UART_DMA_InitStructure_rx.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;         // 8-bit array
+  UART_DMA_InitStructure_rx.DMA_MemoryInc = DMA_MemoryInc_Enable;                     // Increment through array
+  UART_DMA_InitStructure_rx.DMA_MemoryBaseAddr = (uint32_t)&uart_internals.uart_rx_array;                 // 8-bit destination data
+
+  UART_DMA_InitStructure_rx.DMA_BufferSize = UART_RX_BUFFER_SIZE;           // Size of destination array 
+  uart_internals.uart_rx_remain = UART_RX_BUFFER_SIZE;
+
+  DMA_Init(DMA1_Channel5, &UART_DMA_InitStructure_rx);            // Initialize DMA
+
+  // Enable RX channels
+  USART_ClearFlag(USART1,USART_FLAG_RXNE);
+  //USART_DMACmd(USART1,USART_DMAReq_Rx,ENABLE);
+  DMA_Cmd(DMA1_Channel5,ENABLE);
+
+  // set up TX structure
+  DMA_DeInit(DMA1_Channel4);                              // Reset DMA1 channe1 to default values;
+  UART_DMA_InitStructure_tx.DMA_M2M = DMA_M2M_Disable;            // M2M Disabled- Peripheral mode (requires timer trigger)
+  UART_DMA_InitStructure_tx.DMA_Mode = DMA_Mode_Normal;         // Circular mode
+  UART_DMA_InitStructure_tx.DMA_Priority = DMA_Priority_High; // High priority
+  UART_DMA_InitStructure_tx.DMA_DIR = DMA_DIR_PeripheralDST;      // Memory to Peripheral
+
+  UART_DMA_InitStructure_tx.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte; // 8-bit Register
+  UART_DMA_InitStructure_tx.DMA_PeripheralInc = DMA_PeripheralInc_Disable;            // Always write to same register
+  UART_DMA_InitStructure_tx.DMA_PeripheralBaseAddr = (uint32_t)&USART1->DR;           // Output data for GPIO
+
+  UART_DMA_InitStructure_tx.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;         // 8-bit array
+  UART_DMA_InitStructure_tx.DMA_MemoryInc = DMA_MemoryInc_Enable;                     // Increment through array
+
+  DMA_Init(DMA1_Channel4, &UART_DMA_InitStructure_tx);            // Initialize DMA
+
+  // TC and TE interrupts
+  NVIC_InitTypeDef NVIC_InitStructure_tx;
+  NVIC_InitStructure_tx.NVIC_IRQChannel = DMA1_Channel4_IRQn;
+  NVIC_InitStructure_tx.NVIC_IRQChannelPreemptionPriority = 0;
+  NVIC_InitStructure_tx.NVIC_IRQChannelSubPriority = 0;
+  NVIC_InitStructure_tx.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init(&NVIC_InitStructure_tx);
+}
+
+static void uart_dma_tx()
+{
+  //DMA_Cmd(DMA1_Channel4,DISABLE);
+     
+  USART_DMACmd(USART1, USART_DMAReq_Tx, ENABLE);
+
+  DMA1_Channel4->CPAR = (uint32_t)&USART1->DR;           // 1. Write USART_DR
+  DMA1_Channel4->CMAR = (uint32_t)&uart_internals.uart_tx_array[uart_internals.uart_tx_start]; // 2. Write Memory address
+  DMA1_Channel4->CNDTR = (uart_internals.uart_tx_current_end-uart_internals.uart_tx_start); //3. Set number of bytes to transfer
+
+  DMA1_Channel4->CCR &= DMA_DIR_PeripheralDST | DMA_Mode_Normal |
+                       DMA_PeripheralInc_Disable | DMA_MemoryInc_Enable |
+                       DMA_Priority_Low | DMA_M2M_Disable;
+
+  // Enable USART TX DMA request
+  DMA_ITConfig(DMA1_Channel4, DMA_IT_TC | DMA_IT_TE, ENABLE); // 5. Configure DMA interrupt generation
+  USART_ClearFlag(USART1, USART_FLAG_TC); // 6. Clear TC bit in SR register
+  DMA_Cmd(DMA1_Channel4,ENABLE); // 7. Activate channel
 }
 
 /* initializes the usart hardwired to the raspberry pi 
@@ -124,23 +201,129 @@ void pilot_usart_init()
 #endif
   pilot_usart_configure_gpios();
   pilot_usart_configure_usart();
+
+  uart_internals.uart_rx_remain = UART_RX_BUFFER_SIZE;
+  uart_internals.transmitting = false;
+  uart_internals.uart_tx_start = 0;
+  uart_internals.uart_tx_end = 0;
+  uart_dma_init();
 }
 
 
 /* sends the character to the raspberry pi 
    call pilot_usart_init() before calling this function */
-void _putchar(char c)
+bool _putchar(char c)
 {
-  USART_SendData(USART1, c);
-  while (USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
+  __disable_irq();
+  uint32_t nextindex = uart_internals.uart_tx_end + 1;
+  if (nextindex >= UART_TX_BUFFER_SIZE) 
+    nextindex = 0;
+
+  if (nextindex == uart_internals.uart_tx_start) //error! OVERFLOW
+  {
+    uart_internals.send2rpiqueue_overflow_count++; // TODO - this is the SPI overflow counter, maybe make a separate for UART
+  __enable_irq();
+    return false;
+  }
+  else
+  {
+    uart_internals.uart_tx_array[uart_internals.uart_tx_end] = c; // set data to current index
+    uart_internals.uart_tx_end = nextindex; //and progress to the next index
+
+    __enable_irq();
+    return true;
+  }
+  //USART_SendData(USART1, c);
+  //while (USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
 }
 
-void _putchars(char *c, int length)
+bool _putchars(char *c, int length)
 {
   int i;
   for (i = 0; i < length; i++)
     _putchar(c[i]);
+  
+  return true;
 }
 
+
+void pilot_uart_comm() {
+  //RX
+  int remaining = 0;
+  int cndtr = DMA1_Channel5->CNDTR;
+
+  while (uart_internals.uart_rx_remain != cndtr)
+  {
+    remaining = UART_RX_BUFFER_SIZE - uart_internals.uart_rx_remain;
+    _putchar(uart_internals.uart_rx_array[remaining]);
+    uart_internals.uart_rx_remain--; 
+  } 
+
+
+  //TX
+  if (uart_internals.transmitting && DMA_GetFlagStatus(DMA1_FLAG_TC4) == SET ) {
+    //DMA_Cmd(DMA1_Channel4, DISABLE);  //disable DMA
+    DMA1_Channel4->CCR &= ~DMA_CCR1_EN;      // disable DMA
+    uart_internals.transmitting = false;
+  }
+
+  //No DMA transfer in progress and data in buffer
+  //if (DMA_GetFlagStatus(DMA1_FLAG_TC4) == RESET && (uart_internals.uart_tx_start != uart_internals.uart_tx_end))
+  if (!uart_internals.transmitting && (uart_internals.uart_tx_start != uart_internals.uart_tx_end))
+  { 
+
+    //freebuff = _internals.uart_tx_start < _internals.uart_tx_end ? 
+    //                                UART_TX_BUFFER_SIZE - (_internals.uart_tx_end-_internals.uart_tx_start) :
+    //                                (_internals.uart_tx_start - _internals.uart_tx_end);
+    //if (freebuff < _internals.stats.tx_buffer_min)
+    //  _internals.stats.tx_buffer_min = freebuff;
+
+    /* channel disabled and there is data to send */
+    //if (!(DMA1_Channel4->CCR & DMA_CCR1_EN) && uart_internals.uart_tx_start != uart_internals.uart_tx_end)
+    {
+      if (uart_internals.uart_tx_start < uart_internals.uart_tx_end) //data to send (no wraparound)
+        uart_internals.uart_tx_current_end = uart_internals.uart_tx_end;
+      else if (uart_internals.uart_tx_start > uart_internals.uart_tx_end) //wraparound, just read to end
+        uart_internals.uart_tx_current_end = UART_TX_BUFFER_SIZE;
+
+
+      DMA1_Channel4->CPAR = (uint32_t)&USART1->DR;           // 1. Write USART_DR
+      DMA1_Channel4->CMAR = (uint32_t)&uart_internals.uart_tx_array[uart_internals.uart_tx_start]; // 2. Write Memory address
+      DMA1_Channel4->CNDTR = (uart_internals.uart_tx_current_end-uart_internals.uart_tx_start); //3. Set number of bytes to transfer
+
+      DMA1_Channel4->CCR &= DMA_DIR_PeripheralDST | DMA_Mode_Normal |
+                           DMA_PeripheralInc_Disable | DMA_MemoryInc_Enable |
+                           DMA_Priority_Low | DMA_M2M_Disable;
+
+       // Enable USART TX DMA request
+       DMA_ITConfig(DMA1_Channel4, DMA_IT_TC | DMA_IT_TE, ENABLE); // 5. Configure DMA interrupt generation
+       USART_ClearFlag(USART1, USART_FLAG_TC); // 6. Clear TC bit in SR register
+       //DMA_Cmd(DMA1_Channel4,ENABLE); // 7. Activate channel
+
+       DMA1_Channel4->CCR |= DMA_CCR1_EN;       // enable DMA
+       uart_internals.transmitting = true;
+    }
+  }
+}
+
+//called by interrupt handler when TX transfer is completed
+void pilot_uart_transmit_done()
+{
+  if (DMA_GetITStatus(DMA1_IT_TE4) != RESET) {
+    DMA_ClearITPendingBit(DMA1_IT_TE4); //mark interrupt as done
+  }
+  if (DMA_GetITStatus(DMA1_IT_TC4) != RESET) {
+    DMA_ClearITPendingBit(DMA1_IT_TC4); //mark interrupt as done
+    uart_internals.uart_tx_start = uart_internals.uart_tx_current_end == UART_TX_BUFFER_SIZE ? 0 : uart_internals.uart_tx_current_end;
+
+    DMA_Cmd(DMA1_Channel4, DISABLE);  //disable DMA
+
+    uart_internals.transmitting = false;
+    //check if we still data to send, e.g. a circular buffer wraparound
+    //if (uart_internals.uart_tx_start != uart_internals.uart_tx_end) {
+    //  pilot_setup_uart_tx();
+    //}
+  }
+}
 /* END Rpi functions */
 ///////////////////////////////////////
