@@ -58,7 +58,7 @@ Render(model) ::= <<
 #include "i8.h"
 #include "o8.h"
 #include "demo.h"
-#include "pilot_usart.h"
+#include "pilot_uart.h"
 #include "gps.h"
 #include "gsm.h"
 #include "rtc.h"
@@ -71,6 +71,7 @@ Render(model) ::= <<
 #include "fpga.h"
 #include "aio20.h"
 #include "main.h"
+#include "module.h"
 #include "printf.h"
 
 IEC_TIMESPEC __CURRENT_TIME;
@@ -81,6 +82,9 @@ cycletimes_t cycles;
 
 // plc_state
 int plc_state;
+
+// module info
+modules_t module_info;
 
 // hard fault handler in C,
 // with stack frame location as input parameter
@@ -233,17 +237,20 @@ void initialize_tick()
 
   /* cycle time */
   cycles.cycle_min = UINT_MAX;
+}
+
+static void pilot_main_loop(void *state)
+{
+  uint64_t cycle_start, us=0;
+  pilot_cmd_t cmd;
 
   // plc_state, if watchdog reset occured, don't start the plc loop
   if (RCC_GetFlagStatus(RCC_FLAG_IWDGRST) || RCC_GetFlagStatus(RCC_FLAG_WWDGRST)) 
     plc_state = 0;
   else
     plc_state = 1;
-}
 
-static void pilot_main_loop(void *state)
-{
-  uint64_t cycle_start;
+  pilot_rpi_plc_state_get(); //Send PLC state
   
   printf("entering main loop\r\n");
 
@@ -266,7 +273,8 @@ static void pilot_main_loop(void *state)
       cycles.cycle_current_read = GetCycleCount64();
 
       //run code
-      plc_run(state, cycles.cycle_current_read / (<model.ClockSpeed> / 1000000));
+      us = cycles.cycle_current_read / (<model.ClockSpeed> / 1000000);
+      plc_run(state, us);
       cycles.cycle_current_program = GetCycleCount64();
 
       //write outputs
@@ -274,7 +282,7 @@ static void pilot_main_loop(void *state)
       cycles.cycle_current_write = GetCycleCount64();
 
       //handle subscriptions
-      pilot_comm_send_subscribed_plc_variable(plc_find_next_updated_variable());
+      pilot_comm_send_subscribed_plc_variables(&cmd);
     }
     else 
     {
@@ -283,7 +291,7 @@ static void pilot_main_loop(void *state)
       cycles.cycle_current_write = cycles.cycle_current_comm;
     }
 
-    pilot_uart_comm();
+    pilot_uart_comm(GetCycleCount64(), us);
     
     //update cycle time
     cycles.cycle_start = cycle_start; //value is used in pilot_handle_received_data / communication. Save the offset for that.
@@ -323,7 +331,7 @@ int main(void)
   pilot_send_eeprom_uids();
 
   /* enable the rtc */
-  rtc_init();
+  //rtc_init();
 
 <if(model.SPIs)>
   /* initialize spi */

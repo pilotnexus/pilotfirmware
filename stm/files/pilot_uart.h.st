@@ -1,15 +1,9 @@
-#ifndef PILOT_USART_H
-#define PILOT_USART_H
+#ifndef PILOT_UART_H
+#define PILOT_UART_H
 
 #include <stdbool.h>
 #include "stm32_conf.h"
 #include "stm32f10x_dma.h"
-
-//DMA channel 2 -> SPI1_RX (MOSI)
-DMA_InitTypeDef UART_DMA_InitStructure_rx;
-
-//DMA channel 3 -> SPI1_TX (MISO)
-DMA_InitTypeDef UART_DMA_InitStructure_tx;
 
 #define UART_RX_BUFFER_SIZE 1024  
 #define UART_TX_BUFFER_SIZE 1024
@@ -24,6 +18,9 @@ typedef struct {
 
   int send2rpiqueue_overflow_count;
   bool transmitting;
+
+  uint8_t uart_mode;
+  uint32_t debug_cycle_skip_count;
 } uart_internals_t;
 
 void pilot_usart_init(void);
@@ -31,5 +28,6 @@ void pilot_uart_comm();
 bool _putchar(char c);
 bool _putchars(char *c, int length);
 void pilot_setup_uart_tx();
+
 #endif
 

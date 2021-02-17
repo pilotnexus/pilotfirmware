@@ -163,7 +163,7 @@
     <ClInclude Include="..\plc.h" />
     <ClInclude Include="..\pwm.h" />
     <ClInclude Include="..\pilot_comm.h" />
-    <ClInclude Include="..\pilot_usart.h" />
+    <ClInclude Include="..\pilot_uart.h" />
     <ClInclude Include="..\rtc.h" />
     <ClInclude Include="..\slcd.h" />
     <ClInclude Include="..\spi.h" />

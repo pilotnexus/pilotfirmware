@@ -642,8 +642,8 @@
       <TopLine>0</TopLine>
       <CurrentLine>0</CurrentLine>
       <bDave2>0</bDave2>
-      <PathWithFileName>.\pilot_usart.h</PathWithFileName>
-      <FilenameWithoutPath>pilot_usart.h</FilenameWithoutPath>
+      <PathWithFileName>.\pilot_uart.h</PathWithFileName>
+      <FilenameWithoutPath>pilot_uart.h</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>

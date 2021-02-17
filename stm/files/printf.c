@@ -34,7 +34,7 @@
 #include <stdint.h>
 
 #include "printf.h"
-#include "pilot_usart.h"
+#include "pilot_uart.h"
 
 // define this globally (e.g. gcc -DPRINTF_INCLUDE_CONFIG_H ...) to include the
 // printf_config.h header file
@@ -862,6 +862,7 @@ static int _vsnprintf(out_fct_type out, char* buffer, const size_t maxlen, const
 
 int printf_(const char* format, ...)
 {
+  _putchar(0x27); //pilot log string start
   va_list va;
   va_start(va, format);
   char buffer[1];
@@ -894,6 +895,7 @@ int snprintf_(char* buffer, size_t count, const char* format, ...)
 int vprintf_(const char* format, va_list va)
 {
   char buffer[1];
+  _putchar(0x27); //pilot log string start
   return _vsnprintf(_out_char, buffer, (size_t)-1, format, va);
 }
 

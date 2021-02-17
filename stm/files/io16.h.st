@@ -49,7 +49,7 @@ typedef enum
 } pilot_io16_pins_t;
 
 $model.IO16s:{io16|
-  void pilot_$io16.Name$_init(void);
+  int pilot_$io16.Name$_init(void);
   int pilot_$io16.Name$_read_register(pilot_io16_register_t reg, int count, uint8_t *value);
   int pilot_$io16.Name$_write_register(pilot_io16_register_t reg, int count, uint8_t *value);
 
@@ -59,7 +59,7 @@ $model.IO16s:{io16|
 
   int pilot_$io16.Name$_get_value(uint8_t io, uint8_t *value);
   uint8_t pilot_$io16.Name$_get_byte(pilot_io16_register_t reg);
-  void pilot_$io16.Name$_set_byte(pilot_io16_register_t reg, uint8_t value);
+  int pilot_$io16.Name$_set_byte(pilot_io16_register_t reg, uint8_t value);
 
 
 };separator="\n"$

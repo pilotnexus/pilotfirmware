@@ -14,7 +14,7 @@ int pilot_$io16.Name$_write_register(pilot_io16_register_t reg, int count, uint8
 {
   int16_t miso;
   uint8_t address_byte;
-  int ret=1;
+  int ret=0;
   int i;
 
   /* pull chip select down to start the communication */
@@ -29,10 +29,10 @@ int pilot_$io16.Name$_write_register(pilot_io16_register_t reg, int count, uint8
 
     /* the chip should have answered by returning the address */
     if (address_byte != miso)
-      ret = 0;
+      ret = 1;
     else
     {
-      for (i=0;i<count && ret>0;i++)
+      for (i=0;i<count && ret==0;i++)
       {
         /* send the data to write to the chip */
         miso = pilot_spi_dataexchange(spi_id_$io16.SPI.Id$, *value);
@@ -41,12 +41,12 @@ int pilot_$io16.Name$_write_register(pilot_io16_register_t reg, int count, uint8
         if (i == 0) 
         {
           if (miso != get_mosi_count(count))
-            ret = 0;
+            ret = 1;
         \}
         else if (i < count-1) /* not the last byte to send, and not the first, check with previous byte */
         {
           if (miso != *(value-1))
-            ret = 0;
+            ret = 1;
         \}
         if (i == count-1) /* last byte */
         {
@@ -56,14 +56,14 @@ int pilot_$io16.Name$_write_register(pilot_io16_register_t reg, int count, uint8
 
           /* check if the chip returned the data */
           if (miso != *value)
-            ret = 0;
+            ret = 1;
           else
           {
             /* send the CTRL byte to the chip */
             miso = pilot_spi_dataexchange(spi_id_$io16.SPI.Id$, CTRL);
 
             /* check if the chip returned the CTRL byte */
-            ret = (miso == CTRL) ? 1 : 0;
+            ret = (miso == CTRL) ? 0 : 1;
           \}
         \}
 
@@ -75,6 +75,9 @@ int pilot_$io16.Name$_write_register(pilot_io16_register_t reg, int count, uint8
     /* pull chip select up again to disable communication with io16 */
     pilot_spi_set_cs(spi_id_$io16.SPI.Id$, chip_select_disable);
   \}
+  else
+    ret = 1;
+
   return ret;
 \}
 
@@ -82,7 +85,7 @@ int pilot_$io16.Name$_read_register(pilot_io16_register_t reg, int count, uint8_
 {
   uint16_t miso;
   uint8_t address_byte;
-  int ret;
+  int ret=0;
   int i;
 
   /* pull chip select down to enable communication with io16 */
@@ -97,7 +100,7 @@ int pilot_$io16.Name$_read_register(pilot_io16_register_t reg, int count, uint8_
 
     /* the chip should have echoed the requested address */
     if (address_byte != miso)
-      ret = 0;
+      ret = 1;
     else
     {
       /* master sends the number of bytes to be read minus 1, encoded in the first nibble and inverted in the 2nd nibble */
@@ -119,12 +122,15 @@ int pilot_$io16.Name$_read_register(pilot_io16_register_t reg, int count, uint8_
       miso = pilot_spi_dataexchange(spi_id_$io16.SPI.Id$, CTRL);
 
       /* test if the module returned the ctrl byte */
-      ret = (miso == CTRL) ? 1 : 0;
+      ret = (miso == CTRL) ? 0 : 1;
     \}
 
     /* pull chip select up again to disable communication with io16 */
     pilot_spi_set_cs(spi_id_$io16.SPI.Id$, chip_select_disable);
   \}
+  else
+    ret = 1;
+
   return ret;
 \}
 
@@ -139,21 +145,21 @@ int pilot_$io16.Name$_get_direction(uint8_t io, pilot_io16_direction_t *directio
   else if (io >= 8 && io < 16)
     reg = pilot_io16_register_controlword_2B;
   else
-    return 0;
+    return 1;
 
-  if (!pilot_$io16.Name$_read_register(reg, 1, &reg_value))
-    return 0;
+  if (pilot_$io16.Name$_read_register(reg, 1, &reg_value)!=0)
+    return 1;
 
   if ( io < 4 || (io >= 8 && io < 12) )
     mask = (1 << 3);
   else if ( (io >= 4 && io < 8) || (io >= 12 && io < 16))
     mask = (1 << 7);
   else
-    return 0;
+    return 1;
 
   *direction = (reg_value & mask) ? pilot_io16_direction_output : pilot_io16_direction_input;
 
-  return 1;
+  return 0;
 \}
 
 int pilot_$io16.Name$_get_value(uint8_t io, uint8_t *value)
@@ -166,7 +172,7 @@ int pilot_$io16.Name$_get_value(uint8_t io, uint8_t *value)
   /* first get the direction of io */
   ret = pilot_$io16.Name$_get_direction(io, &direction);
 
-  if (ret)
+  if (ret==0)
   {
     /* get the register depending on the io's direction */
     if (direction == pilot_io16_direction_output)
@@ -176,7 +182,7 @@ int pilot_$io16.Name$_get_value(uint8_t io, uint8_t *value)
       else if (io > 8 && io < 16)
         reg = pilot_io16_register_output_register_B;
       else
-        ret = 0;
+        ret = 1;
     \} 
     else if (direction == pilot_io16_direction_input)
     {
@@ -185,16 +191,16 @@ int pilot_$io16.Name$_get_value(uint8_t io, uint8_t *value)
       else if (io > 8 && io < 16)
         reg = pilot_io16_register_input_register_B;
       else
-        ret = 0;
+        ret = 1;
     \}
     else
-      ret = 0;
+      ret = 1;
 
-    if (ret)
+    if (ret==0)
     {
       /* read the register value */
       ret = pilot_$io16.Name$_read_register(reg, 1, &reg_value);
-      if (ret)
+      if (ret==0)
       {
         /* set the values */
         *value = (reg_value >> (io % 8)) & 0x01;
@@ -213,7 +219,7 @@ uint8_t pilot_$io16.Name$_get_byte(pilot_io16_register_t reg)
   uint8_t reg_value;
 
   ret = pilot_$io16.Name$_read_register(reg, 1, &reg_value);
-  if (ret)
+  if (ret==0)
     return reg_value;
 
   return 0;
@@ -233,23 +239,23 @@ int pilot_$io16.Name$_set_direction(pilot_io16_block_t block, pilot_io16_directi
     case pilot_io16_block_0_to_3:
     case pilot_io16_block_4_to_7:
       reg = pilot_io16_register_controlword_2A;
-      ret = 1;
+      ret = 0;
       break;
     case pilot_io16_block_8_to_11:
     case pilot_io16_block_12_to_15:
       reg = pilot_io16_register_controlword_2B;
-      ret = 1;
+      ret = 0;
       break;
     default: /* unknown block */
-      ret = 0;
+      ret = 1;
       break;
   \}
 
   /* first read current directions of the pins */
-  if (ret)
+  if (ret==0)
     ret = pilot_$io16.Name$_read_register(reg, 1, &reg_value);
 
-  if (ret)
+  if (ret==0)
   {
     /* update the current setting with the new direction of the specified block */
     update = 1 << ((block == pilot_io16_block_0_to_3 || block == pilot_io16_block_8_to_11) ? 3 : 7);
@@ -272,15 +278,13 @@ int pilot_$io16.Name$_set_value(pilot_output_target_t output, uint8_t value)
   pilot_io16_register_t reg;
   uint8_t reg_value, update;
 
-  ret = 0;
-
   /* get the register that holds this outputs value */
   reg = output < 8 ? pilot_io16_register_output_register_A : pilot_io16_register_output_register_B;
 
   /* first read the current output values that the specific output belongs to */
   ret = pilot_$io16.Name$_read_register(reg, 1, &reg_value);
 
-  if (ret)
+  if (ret==0)
   {
     /* update the register value */
     update = 1 << ((int)output % 8);
@@ -297,12 +301,9 @@ int pilot_$io16.Name$_set_value(pilot_output_target_t output, uint8_t value)
 \}
 
 /* wrapper function for setting the value of a nibble (not byte!) */
-void pilot_$io16.Name$_set_byte(pilot_io16_register_t reg, uint8_t value)
+int pilot_$io16.Name$_set_byte(pilot_io16_register_t reg, uint8_t value)
 {
-  int ret;
-
-  ret = pilot_$io16.Name$_write_register(reg, 1, &value);
-  /* todo report error */
+  return pilot_$io16.Name$_write_register(reg, 1, &value);
 \}
 
 /* enables/disables the interrupt on input changes */
@@ -315,7 +316,7 @@ static int pilot_$io16.Name$_set_input_change_irq_enable(uint8_t enable)
   ret = pilot_$io16.Name$_write_register(pilot_io16_register_irq_enable_inputchange_A, 1, &value);
 
   /* enable / disable interrupt for IOs 8-15 */
-  if (ret)
+  if (ret==0)
     ret = pilot_$io16.Name$_write_register(pilot_io16_register_irq_enable_inputchange_B, 1, &value);
 
   return ret;
@@ -330,7 +331,7 @@ static int pilot_$io16.Name$_set_io_filter_bypass_enable(uint8_t enable)
   ret = pilot_$io16.Name$_write_register(pilot_io16_register_controlword_1A, 1, &value);
 
   /* enable / disable io filter bypass for pins 8-15 */
-  if (ret)
+  if (ret==0)
     ret = pilot_$io16.Name$_write_register(pilot_io16_register_controlword_1B, 1, &value);
 
   return ret;
@@ -403,8 +404,9 @@ static void pilot_$io16.Name$_init_gpio()
 
 \}
 
-void pilot_$io16.Name$_init()
+int pilot_$io16.Name$_init()
 {
+  int ret = 0;
   /* configure the interrupt pin */
   pilot_$io16.Name$_init_gpio();
 
@@ -413,19 +415,21 @@ void pilot_$io16.Name$_init()
   pilot_$io16.Name$_init_nvic();
 
   /* enable internal clock */
-  pilot_$io16.Name$_set_internal_clock_enable();
+  ret = pilot_$io16.Name$_set_internal_clock_enable();
 
   /* enable the io filter bypass */
-  pilot_$io16.Name$_set_io_filter_bypass_enable(1);
+  ret |= pilot_$io16.Name$_set_io_filter_bypass_enable(1);
 
   /* reset the interrupt if it is already on */
-  pilot_$io16.Name$_set_irq_handled();
+  ret |= pilot_$io16.Name$_set_irq_handled();
 
   /* enable the interrupt on the io16 module */
-  pilot_$io16.Name$_set_input_change_irq_enable(1);
+  ret |= pilot_$io16.Name$_set_input_change_irq_enable(1);
 
   /* pull the chip select high to disable transfer */
   //GPIO_WriteBit($io16.SPI.NssPin.GPIO$, $io16.SPI.NssPin.Pin$, Bit_SET);
+
+  return ret;
 \}
 
 };separator="\n"$

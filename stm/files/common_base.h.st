@@ -14,7 +14,7 @@
 #define MODULE_PORT_COUNT 2
 
 /* command message payload calc macro */
-#define MSG_LEN(x) (0x7F & ((x + 4 - 1)/ 4))
+#define MSG_LEN(x) (0x7F & ((x + 3) >> 2))
 
 /* we're using byte-wise SPI communication */
 typedef uint8_t spidata_t;
@@ -57,19 +57,21 @@ typedef enum
   pilot_cmd_type_plc_state_get,              /* rpi <->  request to send the state of the plc */
   pilot_cmd_type_plc_state_set,              /* rpi ->  command to set the state of the plc */
   pilot_cmd_type_plc_cycletimes_get,         /* rpi <->  request to send the plc cycle times */
-  pilot_cmd_type_plc_variables_read_config,  /* rpi ->  command to notify the  that the plc variable config stream will be send */
-  pilot_cmd_type_plc_variables_write_config, /* rpi <->  request to send the configured plc variables */
-  pilot_cmd_type_plc_variables_get,          /* rpi <->  request to send the configured plc variables */
-  pilot_cmd_type_plc_variables_set,          /* rpi ->  comand to write the configure plc variables */
+  pilot_cmd_type_plc_read_var_config,        /* rpi ->  command to notify the  that the plc variable config stream will be send */
+  pilot_cmd_type_plc_write_var_config,       /* rpi <->  request to send the configured plc variables */
+  pilot_cmd_type_plc_variable_get,           /* rpi <->  request to send the configured plc variables */
+  pilot_cmd_type_plc_variable_set,           /* rpi ->  comand to write the configure plc variables */
   pilot_cmd_type_lora_set_enable,            /* rpi ->  command to enable / disable lora module */
   pilot_cmd_type_lora_get_enable,            /* rpi <->  request to send the enabled state of the lora module */
   pilot_cmd_type_test_run,                   /* rpi <->  request to run internal tests */
-  pilot_cmd_type_plc_variable_get,           /* rpi <-> get plc variable */
-  pilot_cmd_type_plc_variable_set,           /* rpi <-> set plc variable */
+  pilot_cmd_type_module_status_get,          /* rpi <-> get module status */
+  pilot_cmd_type_module_status_set,          /* rpi <-> set module status */
   pilot_cmd_type_fpga_state,                 /* rpi <-> fpga state */
   pilot_cmd_type_fpga_cmd,                   /* rpi <-> fpga write data */
   pilot_cmd_type_comm_stats_get,             /* rpi <-> get communication stats */
-  pilot_cmd_type_fwinfo                      /* rpi <-> get fw info */
+  pilot_cmd_type_fwinfo,                     /* rpi <-> get fw info */
+  pilot_cmd_type_uart_mode_get,              /* rpi <-> get uart mode */
+  pilot_cmd_type_uart_mode_set,              /* rpi <-> set uart mode*/
 } pilot_cmd_type_t;
 
 /* module types */
@@ -138,7 +140,7 @@ typedef enum {
   pilot_current_cmd_index_data_begin = 4
 } pilot_current_cmd_index_t;
 
-/* struct that holds the current rpcp command that is being received */
+/* struct that holds the current pilot command that is being received */
 typedef struct {
   pilot_cmd_t cmd;                 /* the command we're receiving from the rpi */
   uint32_t index; /* current index of the fillstatus of this command */

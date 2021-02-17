@@ -286,9 +286,25 @@ CmdResult single_ended_adc_read(uint8_t slot, MAX11300_Ports port, uint16_t *dat
     return result;
 }
 
-void single_ended_adc_read_all(uint8_t slot, uint8_t *data)
+uint16_t aio20_get_device_id(uint8_t slot)
+{
+  uint16_t dev_id;
+
+  //read device id
+  pilot_spi_set_cs(slot_to_spi[slot], chip_select_enable);
+  pilot_spi_dataexchange(slot_to_spi[slot], MAX11300Addr_SPI_Read(dev_id));
+  dev_id = pilot_spi_dataexchange(slot_to_spi[slot], 0x0) << 8; 
+  dev_id |= pilot_spi_dataexchange(slot_to_spi[slot], 0x1); 
+  pilot_spi_set_cs(slot_to_spi[slot], chip_select_disable);
+
+  return dev_id;
+}
+
+int single_ended_adc_read_all(uint8_t slot, uint8_t *data)
 {
     int i;
+    uint16_t dev_id = aio20_get_device_id(slot);
+
     pilot_spi_set_cs(slot_to_spi[slot], chip_select_enable);
     pilot_spi_dataexchange(slot_to_spi[slot], MAX11300Addr_SPI_Read(adc_data_port_00));
     for(i = 0; i < 20; i++)
@@ -298,6 +314,8 @@ void single_ended_adc_read_all(uint8_t slot, uint8_t *data)
       data+=2;
     }
     pilot_spi_set_cs(slot_to_spi[slot], chip_select_disable);
+    
+    return (dev_id == 0x424) ? 0 : 1;
 }
 
 //*********************************************************************

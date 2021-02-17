@@ -1,8 +1,11 @@
-#include "pilot_usart.h"
+#include "pilot_uart.h"
+#include "plc_memory.h"
 #include "types.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <errno.h>
+#include <string.h>
+#include <module.h>
 
 /* raspberry pi serial port uses USART1 */
 
@@ -18,6 +21,23 @@ static void pilot_usart_configure_usart(void);
 #define GPIO_Pin_pilot_usart_Tx_Source GPIO_PinSource9
 
 static uart_internals_t uart_internals = {0};
+
+//DMA channel 2 -> SPI1_RX (MOSI)
+static DMA_InitTypeDef UART_DMA_InitStructure_rx;
+
+//DMA channel 3 -> SPI1_TX (MISO)
+static DMA_InitTypeDef UART_DMA_InitStructure_tx;
+
+static const unsigned char base64_enc_map[64] =
+{
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
+    'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
+    'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd',
+    'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
+    'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',
+    'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7',
+    '8', '9', '+', '/'
+};
 ///////////////////////////////////////
 /* START Rpi functions */
 
@@ -233,6 +253,7 @@ bool _putchar(char c)
     __enable_irq();
     return true;
   }
+
   //USART_SendData(USART1, c);
   //while (USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
 }
@@ -246,11 +267,64 @@ bool _putchars(char *c, int length)
   return true;
 }
 
+/*
+ * enqueue a buffer in base64 format
+ */
+int base64_encode_send( const uint8_t *src, size_t slen )
+{
+    size_t i, n;
+    int C1, C2, C3;
 
-void pilot_uart_comm() {
+    if( slen == 0 )
+        return( 0 );
+
+    n = (slen << 3) / 6;
+
+    switch( (slen << 3) - (n * 6) )
+    {
+        case  2: n += 3; break;
+        case  4: n += 2; break;
+        default: break;
+    }
+
+    n = (slen / 3) * 3;
+
+    for( i = 0; i < n; i += 3 )
+    {
+        C1 = *src++;
+        C2 = *src++;
+        C3 = *src++;
+
+        _putchar(base64_enc_map[(C1 >> 2) & 0x3F]);
+        _putchar(base64_enc_map[(((C1 &  3) << 4) + (C2 >> 4)) & 0x3F]);
+        _putchar(base64_enc_map[(((C2 & 15) << 2) + (C3 >> 6)) & 0x3F]);
+        _putchar(base64_enc_map[C3 & 0x3F]);
+    }
+
+    if( i < slen )
+    {
+        C1 = *src++;
+        C2 = ((i + 1) < slen) ? *src++ : 0;
+
+        _putchar(base64_enc_map[(C1 >> 2) & 0x3F]);
+        _putchar(base64_enc_map[(((C1 & 3) << 4) + (C2 >> 4)) & 0x3F]);
+
+        if( (i + 1) < slen )
+             _putchar(base64_enc_map[((C2 & 15) << 2) & 0x3F]);
+        else _putchar('=');
+
+        _putchar('=');
+    }
+
+    return( 0 );
+}
+
+void pilot_uart_comm(uint64_t cycle, uint64_t us) {
   //RX
-  int remaining = 0;
+  int remaining = 0, i=0;
   int cndtr = DMA1_Channel5->CNDTR;
+  uint8_t *plc_mem;
+  uint8_t header[20+sizeof(modules_t)];
 
   while (uart_internals.uart_rx_remain != cndtr)
   {
@@ -265,6 +339,30 @@ void pilot_uart_comm() {
     //DMA_Cmd(DMA1_Channel4, DISABLE);  //disable DMA
     DMA1_Channel4->CCR &= ~DMA_CCR1_EN;      // disable DMA
     uart_internals.transmitting = false;
+  }
+
+  if (uart_internals.uart_mode == 1) //uart debug mode
+  {
+    if (!uart_internals.transmitting) //not transmitting
+    {
+      //transmit debug data
+      _putchar('*'); //start debug message
+      memcpy(header, &cycle, sizeof(cycle));
+      memcpy(&header[8], &us, sizeof(us));
+      memcpy(&header[16], &uart_internals.debug_cycle_skip_count, sizeof(uart_internals.debug_cycle_skip_count));
+      memcpy(&header[20], get_module_info(), sizeof(modules_t));
+      base64_encode_send(header, sizeof(header));
+      base64_encode_send((uint8_t *)_get_plc_mem_devices_struct(), sizeof(plc_dev_t));
+      _putchar('\n'); //end debug message
+
+      uart_internals.debug_cycle_skip_count = 0;
+    }
+    else
+    { //we skip this cycle since we are still transmitting
+       uart_internals.debug_cycle_skip_count++; 
+
+    }
+
   }
 
   //No DMA transfer in progress and data in buffer
@@ -325,5 +423,18 @@ void pilot_uart_transmit_done()
     //}
   }
 }
+
+int pilot_uart_mode_get()
+{
+  return uart_internals.uart_mode;
+
+}
+
+void pilot_uart_mode_set(int mode)
+{
+  uart_internals.uart_mode = mode;
+  void pilot_usart_init();
+}
+
 /* END Rpi functions */
 ///////////////////////////////////////

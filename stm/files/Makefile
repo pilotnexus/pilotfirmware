@@ -13,7 +13,7 @@ else
   mk = mkdir -p $1
 endif
 
-DEBUG_LEVEL=3
+DEBUG_LEVEL=0
 SRC_DIR=..${S}src
 RUST_ASM_DIR=..${S}tarrget${S}thumbv7m-none-eabi${S}debug${S}deps
 BUILD_DIR=build
@@ -27,7 +27,7 @@ LDFLAGS=-specs=nosys.specs -nostartfiles -Wl,-Tstm32.ld
 #LDFLAGS=-Wl,-Tstm32.ld -nostartfiles -Xlinker -Map=output.map
 #CCFLAGS=-mcpu=cortex-m3 -mthumb -std=c99 -DUSE_STDPERIPH_DRIVER -specs=nosys.specs -nostartfiles -g -O$(DEBUG_LEVEL) -Wl,-Tstm32.ld -I"." -I"inc" 
 CCFLAGS=-mcpu=cortex-m3 -mthumb -DUSE_STDPERIPH_DRIVER -specs=nosys.specs -nostartfiles -g -O$(DEBUG_LEVEL) -Wl,-Tstm32.ld -I"." -I"inc" 
-LDFLAGS=-mcpu=cortex-m3 -mthumb -DUSE_STDPERIPH_DRIVER -specs=nosys.specs -nostartfiles -g -O$(DEBUG_LEVEL) -Wl,-Tstm32.ld -I"." -I"inc" 
+LDFLAGS=-mcpu=cortex-m3 -mthumb -DUSE_STDPERIPH_DRIVER -specs=nosys.specs -nostartfiles -g -O$(DEBUG_LEVEL) -Wl,-Tstm32.ld,--gc-sections -I"." -I"inc" -zmuldefs -ffunction-sections -fdata-sections
 
 SRCS=$(wildcard *.c)
 SSRCS=$(wildcard *.s)

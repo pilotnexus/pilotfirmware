@@ -4,38 +4,6 @@
 #include "common_base.h"
 #include "stm.h"
 
-  #define MAX_PLC_VARS 256
-  typedef struct
-  {
-    char last_char;                 /* the first byte of the current number */
-    int  has_last_char;             /* 1 if last_char holds a value */
-    int expected;                   /* the expected variable count */
-    int count;                      /* the active count of variables */
-    uint16_t numbers[MAX_PLC_VARS]; /* the variables numbers */
-  } pilot_plc_vars_config_t;
-
-  #define MAX_PLC_VARS_SIZE 256
-  typedef struct
-  {
-    int size; /* the number of bytes that values need */
-    char buffer[MAX_PLC_VARS_SIZE];
-  } pilot_plc_vars_values_t;
-
-  typedef struct
-  {
-    int count;                      /* the index of last written buffer (=count) */
-    int expected;                   /* the expected count of bytes */
-    char buffer[MAX_PLC_VARS_SIZE]; /* the byte buffer */
-  } pilot_plc_vars_write_values_t;
-
-  typedef struct
-  {
-    pilot_plc_vars_config_t read_config;
-    pilot_plc_vars_config_t write_config;
-    pilot_plc_vars_values_t read_values;
-    pilot_plc_vars_write_values_t write_values;
-  } pilot_plc_vars_t;
-
 #define RX_BUFFER_SIZE 1024
 #define RX_BUFFER_BYTESIZE RX_BUFFER_SIZE*2
 
@@ -67,7 +35,7 @@ typedef struct {
   int send2rpiqueue_usart_overflow_count;
 
   stats_t stats;
-  pilot_plc_vars_t plc;
+  //pilot_plc_vars_t plc;
 } internals_t;
 
 #endif

@@ -305,7 +305,7 @@
     <ClInclude Include="..\pilot_comm.h">
       <Filter>Header files</Filter>
     </ClInclude>
-    <ClInclude Include="..\pilot_usart.h">
+    <ClInclude Include="..\pilot_uart.h">
       <Filter>Header files</Filter>
     </ClInclude>
     <ClInclude Include="..\rtc.h">

@@ -159,7 +159,7 @@ RenderBody(model) ::= <<
     ///@return Result of operation
     CmdResult single_ended_adc_read(uint8_t slot, MAX11300_Ports port, uint16_t *data);
     
-    void single_ended_adc_read_all(uint8_t slot, uint8_t *data); 
+    int single_ended_adc_read_all(uint8_t slot, uint8_t *data); 
     
     ///@brief Write single ended DAC configured port
     ///@param[in] port - single ended DAC configured port
@@ -168,6 +168,7 @@ RenderBody(model) ::= <<
     CmdResult single_ended_dac_write(uint8_t slot, MAX11300_Ports port, uint16_t data);
 
     void AIO20_init(uint8_t slot);
+    uint16_t aio20_get_device_id(uint8_t slot);
 >>
 
  

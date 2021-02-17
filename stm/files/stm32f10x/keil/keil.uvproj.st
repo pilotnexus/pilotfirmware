@@ -602,9 +602,9 @@
               <FilePath>.\stm.h</FilePath>
             </File>
             <File>
-              <FileName>pilot_usart.h</FileName>
+              <FileName>pilot_uart.h</FileName>
               <FileType>5</FileType>
-              <FilePath>.\pilot_usart.h</FilePath>
+              <FilePath>.\pilot_uart.h</FilePath>
             </File>
             <File>
               <FileName>pilot_usart.c</FileName>

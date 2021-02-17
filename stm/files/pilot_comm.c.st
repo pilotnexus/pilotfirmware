@@ -2,7 +2,7 @@
 #include "pilot_comm.h"
 #include "plc.h"
 #include "eeprom.h"
-#include "pilot_usart.h"
+#include "pilot_uart.h"
 #include "stm32f10x_crc.h"
 #include "stm32f10x_dma.h"
 #include "i8.h"
@@ -25,6 +25,7 @@
 #include "rtc.h"
 #include "slcd.h"
 #include "test.h"
+#include "module.h"
 
 $if(model.AIO20s)$
 #include "aio20.h"
@@ -32,6 +33,12 @@ $endif$
 
 /* holds private members */
 static internals_t _internals = {0};
+
+//DMA channel 2 -> SPI1_RX (MOSI)
+DMA_InitTypeDef DMA_InitStructure_rx;
+
+//DMA channel 3 -> SPI1_TX (MISO)
+DMA_InitTypeDef DMA_InitStructure_tx;
 
 static void pilot_pilot_comm_spi_init(void);
 static void pilot_pilot_comm_spi_dma_init();
@@ -589,11 +596,11 @@ void pilot_handle_received_data()
       }
       else if (target == target_plc_read)
       { /* forward the data to the plc */
-        pilot_comm_handle_plc_readdata(data);
+        //pilot_comm_handle_plc_readdata(data);
       }
       else if (target == target_plc_write)
       {
-        pilot_comm_handle_plc_writedata(data);
+        //pilot_comm_handle_plc_writedata(data);
       }
       else /* forward the data to the specified module */
       {
@@ -1268,7 +1275,7 @@ extern int plc_state;
 extern cycletimes_t cycles;
 extern unsigned long long __tick;
 
-static void pilot_rpi_plc_state_get()
+void pilot_rpi_plc_state_get()
 {
   pilot_cmd_t cmd;
   memset(&cmd, 0, sizeof(pilot_cmd_t));
@@ -1326,249 +1333,76 @@ static void pilot_rpi_plc_cycletimes_get()
   pilot_comm_send_cmd(&cmd);
 }
 
-static void pilot_rpi_plc_variables_read_config(pilot_cmd_t *cmd)
-{
-  /* prepare to receive the variables numbers */
-  _internals.plc.read_config.expected = INT_FROM_BYTES((cmd->data + (int)pilot_plc_variables_value_index_size));
-  _internals.plc.read_config.count = 0;
-  _internals.plc.read_config.has_last_char  = 0;
-}
-
-static void pilot_rpi_plc_variables_read_config_reply(int successful)
-{
-  pilot_cmd_t cmd;
-  memset(&cmd, 0, sizeof(pilot_cmd_t));
-  cmd.target = target_base;
-  cmd.type = pilot_cmd_type_plc_variables_read_config;
-  cmd.data[0] = successful ? 1 : 0;
-  cmd.length = MSG_LEN(4);
-  
-  pilot_comm_send_cmd(&cmd);
-}
-
-static void pilot_comm_handle_plc_readdata(char data)
-{
-  uint16_t number;
-  pilot_plc_vars_config_t *cfg = &_internals.plc.read_config;
-
-  /* collect the plc data */
-  if (cfg->count < MAX_PLC_VARS)
-  {
-    /* keep the first byte */
-    if (!cfg->has_last_char)
-    {
-      cfg->last_char = data;
-      cfg->has_last_char = 1;
-    }
-    else
-    {
-      /* complete the number of the second byte */
-      number = (uint16_t) ( (data << 8) | cfg->last_char );
-      cfg->numbers[cfg->count++] = number;
-      cfg->has_last_char = 0;
-
-      /* check if we have received the expected number of variables */
-      if (cfg->count == cfg->expected)
-      {
-        /* configure plc variables */
-        _internals.plc.read_values.size = plc_configure_read_variables(cfg->numbers, cfg->count);
-
-        /* send a variables config reply to signal that the configuration is complete */
-        pilot_rpi_plc_variables_read_config_reply(_internals.plc.read_values.size <= MAX_PLC_VARS_SIZE);
-      }
-    }
-  }
-}
-
-static void pilot_rpi_plc_variables_write_config(pilot_cmd_t *cmd)
-{
-  /* prepare to receive the variable numbers */
-  _internals.plc.write_config.expected = INT_FROM_BYTES((cmd->data + (int)pilot_plc_variables_value_index_size));
-  _internals.plc.write_config.count = 0;
-  _internals.plc.write_config.has_last_char = 0;
-}
-
-static void pilot_rpi_plc_variables_write_config_reply(int successful)
-{
-  pilot_cmd_t cmd;
-  memset(&cmd, 0, sizeof(pilot_cmd_t));
-  cmd.target = target_base;
-  cmd.type = pilot_cmd_type_plc_variables_write_config;
-  cmd.data[0] = successful ? 1 : 0;
-  cmd.length = MSG_LEN(4);
-  pilot_comm_send_cmd(&cmd);
-}
-
-static void pilot_comm_handle_plc_writeconfig(pilot_plc_vars_config_t *cfg, char data)
-{
-  uint16_t number;
-
-  /* collect the plc data */
-  if (cfg->count < MAX_PLC_VARS)
-  {
-    /* keep the first byte */
-    if (!cfg->has_last_char)
-    {
-      cfg->last_char = data;
-      cfg->has_last_char = 1;
-    }
-    else
-    {
-      /* complete the number of the second byte */
-      number = (uint16_t)((data << 8) | cfg->last_char);
-      cfg->numbers[cfg->count++] = number;
-      cfg->has_last_char = 0;
-
-      /* check if we have received the expected number of variables */
-      if (cfg->count == cfg->expected)
-      {
-        /* configure plc write variables */
-        plc_configure_write_variables(cfg->numbers, cfg->count);
-
-        /* send a variables config reply to signal that the configuration is complete */
-        pilot_rpi_plc_variables_write_config_reply(1);
-      }
-    }
-  }
-}
-
-static void pilot_rpi_plc_variables_write_values_reply()
-{
-  pilot_cmd_t cmd;
-  /* setup the cmd */
-  memset(&cmd, 0, sizeof(pilot_cmd_t));
-  cmd.target = target_plc_write;
-  cmd.type = pilot_cmd_type_plc_variables_set;
-  
-  /* send the cmd */
-  cmd.length = 0; //no payload
-  pilot_comm_send_cmd(&cmd);
-}
-
-static void pilot_comm_handle_plc_writevalues(pilot_plc_vars_write_values_t *val, char data)
-{
-  /* if there is room in the buffer */
-  if (val->count < MAX_PLC_VARS_SIZE)
-  {
-    /* add the data to the buffer */
-    val->buffer[val->count++] = data;
-
-    /* if we have received the expected number of bytes */
-    if (val->count == val->expected)
-    {
-      /* write the variables */
-      plc_write_variables(val->buffer, val->count);
-
-      /* send a variables value set reply to signal that the values setting is complete */
-      pilot_rpi_plc_variables_write_values_reply();
-    }
-  }
-}
-
 /* is called when a variable subscription event happens */
-void pilot_comm_send_subscribed_plc_variable(int plc_variable_number)
+void pilot_comm_send_subscribed_plc_variables(pilot_cmd_t *cmd)
 {  
-  if (plc_variable_number != -1 && _internals.bufferstate != stm_bufferstate_full)
+  //if (_internals.bufferstate != stm_bufferstate_full)
+  if (GPIO_ReadOutputDataBit(GPIO_Pin_BOARD, GPIO_Pin_DATA_M2R) == Bit_RESET) //only send subscribed variables when there is no data to send
   {
-    pilot_cmd_t cmd;
-    /* setup the cmd */
-    memset(&cmd, 0, sizeof(pilot_cmd_t));
-    cmd.target = target_base;
-    cmd.type = pilot_cmd_type_plc_variable_get;
- 
-    plc_read_from_variable(plc_variable_number, 1, cmd.data, pilot_cmd_t_data_size);
+    uint32_t length = plc_get_updated_variables(cmd->data, sizeof(cmd->data));
+    if (length > 0)
+    {
+      cmd->target = target_base;
+      cmd->type = pilot_cmd_type_plc_variable_get;
 
-    *((uint16_t *)&cmd.data[8]) = plc_variable_number | PLC_VAR_SUBSCRIBE_BIT;
-
-    /* send the answer */
-    cmd.length = MSG_LEN(12);
-    pilot_comm_send_cmd(&cmd);
+      /* send the answer */
+      cmd->length = MSG_LEN(length);
+      pilot_comm_send_cmd(cmd);
+    }
   }  
 }
 
-/* is called when receiving stream data with target plc write,
-   used for the write configuration and the write values */
-static void pilot_comm_handle_plc_writedata(char data)
+static void pilot_rpi_plc_variable_read_config(pilot_cmd_t *cmd)
 {
-  pilot_plc_vars_config_t *cfg = &_internals.plc.write_config;
-  pilot_plc_vars_write_values_t *val = &_internals.plc.write_values;
+  msg_plc_var_config_t *v = (msg_plc_var_config_t *)cmd->data;
 
-  /* is the data supposed to be write configuration? */
-  if (cfg->count < cfg->expected)
-    pilot_comm_handle_plc_writeconfig(cfg, data);
-  /* is the data supposed to be a write value? */
-  else if(val->count < val->expected)
-    pilot_comm_handle_plc_writevalues(val, data);
+  v->value = plc_read_config_from_variable(v->number, v->config);
 
+  /* send the answer */
+  pilot_comm_send_cmd(cmd);
 }
 
-static void pilot_rpi_plc_variables_get_reply(int size)
+static void pilot_rpi_plc_variable_write_config(pilot_cmd_t *cmd)
 {
-  int i;
-  /* prepare the reply to plc variables get command */
-  pilot_cmd_t cmd;
-  memset(&cmd, 0, sizeof(cmd));
-  cmd.target = target_base;
-  cmd.type = pilot_cmd_type_plc_variables_get;
+  msg_plc_var_config_t *v = (msg_plc_var_config_t *)cmd->data;
 
-  for (i = 0; i < sizeof(int); i++)
-    cmd.data[(int)pilot_plc_variables_value_index_size + i] = BYTE_FROM_INT(size, i);
-
-  /* send the answer with the size of the variables */
-  cmd.length = MSG_LEN(8);
-  pilot_comm_send_cmd(&cmd);
-
-}
-
-/* is called when the plc variables get cmd is received */
-static void pilot_rpi_plc_variables_get()
-{
-  int actual_size;
-  pilot_plc_vars_values_t *values = &_internals.plc.read_values;
-
-  /* send the variable values back as a stream */
-  if (values->size > 0 && values->size <= MAX_PLC_VARS_SIZE)
-  {
-    /* update the values buffer */
-    actual_size = plc_read_variables(_internals.plc.read_values.buffer);
-
-    /* send the variables get reply */
-    pilot_rpi_plc_variables_get_reply(actual_size);
-
-    /* send the variable values back as a stream */
-    pilot_comm_send(target_plc_read, _internals.plc.read_values.buffer, actual_size);
-  }
-
+  v->value = plc_write_config_to_variable(v->number,v->config,v->value);
+  /* send the answer */
+  pilot_comm_send_cmd(cmd);
 }
 
 /* is called when the plc variable get cmd is received */
 static void pilot_rpi_plc_variable_get(pilot_cmd_t * cmd)
 {
-  plc_read_from_variable(*((uint16_t *)&cmd->data[8]), 0, cmd->data, pilot_cmd_t_data_size);
-  *((uint16_t *)&cmd->data[8]) &= 0xFFF; //remove flags for reply
+  int length = 0;
+  msg_plc_var_t *v = (msg_plc_var_t *) cmd->data;
+  uint8_t sub = GET_VAR_SUB(v->opt);
+
+  length = plc_read_from_variable(v->number, sub, v->value, 0);
+
+  //currently only one variable is supported
+  v->opt = 0;
+  v->opt |= SET_VAR_SUB(sub);
+  v->opt |= SET_VAR_LEN(length);
 
   /* send the answer */
-  cmd->length = MSG_LEN(12); //TODO make size dynamic depending on var size
+  cmd->length = MSG_LEN(MSG_PLC_VAR_HEADER_LEN+length);
   pilot_comm_send_cmd(cmd);
 }
 
-/* is called when the plc variable get cmd is received */
+/* is called when the plc variable set cmd is received */
+//currently only one variable is supported
 static void pilot_rpi_plc_variable_set(pilot_cmd_t * cmd)
 {
-  plc_write_to_variable(*((uint16_t *)&cmd->data[8]), 0, (uint8_t *)cmd->data, pilot_cmd_t_data_size);
- 
+  msg_plc_var_t *v = (msg_plc_var_t *) cmd->data;
+  int len = plc_write_to_variable(v->number, GET_VAR_SUB(v->opt), v->value, 0);
+  //v->value[0] = (uint8_t)len;
+
   /* send the answer */
-  cmd->length = MSG_LEN(12); //TODO make size dynamic depending on var size
+  //cmd->length = MSG_LEN(4);
   pilot_comm_send_cmd(cmd);
 }
 
-/* is called when the plc variables set cmd is received */
-static void pilot_rpi_plc_variables_set(pilot_cmd_t *cmd)
-{
-  /* expect a variables command stream */
-  _internals.plc.write_values.expected = INT_FROM_BYTES((cmd->data + (int)pilot_plc_variables_value_index_size));
-  _internals.plc.write_values.count = 0;
-}
 
 static void pilot_comm_run_test(pilot_cmd_t *cmd)
 {
@@ -1645,8 +1479,57 @@ static void pilot_rpi_comm_stats(pilot_cmd_t *cmd)
 
 static void pilot_rpi_fwinfo_cmd(pilot_cmd_t *cmd) {
   static const char version[] = "$model.Version$";
-  strncpy(cmd->data, version, pilot_cmd_t_data_size);
-  cmd->length = MSG_LEN(sizeof(version));
+  uint32_t length = 0;
+
+  length = sizeof(version);
+
+  if (cmd->data[0] == 0) {
+    if (length > sizeof(cmd->data)-1)
+      length = sizeof(cmd->data)-1;
+    strncpy(&cmd->data[1], version, length);
+  } else {
+    length = plc_fw_version(cmd->data[0], &cmd->data[1], sizeof(cmd->data)-1);
+    if (length > sizeof(cmd->data)-1)
+      length = sizeof(cmd->data)-1;
+  }
+
+  cmd->length = MSG_LEN(length+1);
+  pilot_comm_send_cmd(cmd);
+
+}
+
+static void pilot_rpi_uart_mode_get(pilot_cmd_t *cmd)
+{
+  int mode;
+  mode = pilot_uart_mode_get();
+  memcpy(cmd->data, &mode, sizeof(mode)); 
+  cmd->length = MSG_LEN(4);
+  pilot_comm_send_cmd(cmd);
+}
+
+static void pilot_rpi_uart_mode_set(pilot_cmd_t *cmd)
+{
+  int mode;
+  memcpy(&mode, cmd->data, sizeof(mode)); 
+  if (mode != pilot_uart_mode_get())
+    pilot_uart_mode_set(mode);
+    
+  pilot_rpi_uart_mode_get(cmd); //return the current value (works because get fn does not overwrite set cmd)
+}
+
+static void pilot_rpi_module_status_get(module_slot_t slot, pilot_cmd_t *cmd)
+{
+  int status = pilot_get_module_status(slot);
+  memcpy(cmd->data, &status, 4);
+  cmd->length = MSG_LEN(4);
+  pilot_comm_send_cmd(cmd);
+}
+
+static void pilot_rpi_module_status_set(module_slot_t slot, pilot_cmd_t *cmd)
+{
+  int status;
+  memcpy(&status, cmd->data, 4);
+  pilot_set_module_status(slot, status);
   pilot_comm_send_cmd(cmd);
 }
 
@@ -1794,22 +1677,6 @@ static void pilot_pilot_comm_spi_handle_cmd_complete(pilot_cmd_t *cmd)
         pilot_rpi_plc_cycletimes_get();
         break;
 
-      case pilot_cmd_type_plc_variables_read_config:
-        pilot_rpi_plc_variables_read_config(cmd);
-        break;
-
-      case pilot_cmd_type_plc_variables_write_config:
-        pilot_rpi_plc_variables_write_config(cmd);
-        break;
-
-      case pilot_cmd_type_plc_variables_get:
-        pilot_rpi_plc_variables_get();
-        break;
-
-      case pilot_cmd_type_plc_variables_set:
-        pilot_rpi_plc_variables_set(cmd);
-        break;
-
       case pilot_cmd_type_io16_set_direction:
         pilot_rpi_io16_set_direction(slot, 
           (pilot_io16_block_t)cmd->data[(int)pilot_io16_set_direction_index_block],
@@ -1843,21 +1710,46 @@ static void pilot_pilot_comm_spi_handle_cmd_complete(pilot_cmd_t *cmd)
         pilot_rpi_plc_variable_set(cmd);
       break;
 
+      case pilot_cmd_type_plc_read_var_config:
+        pilot_rpi_plc_variable_read_config(cmd);
+        break;
+
+      case pilot_cmd_type_plc_write_var_config:
+        pilot_rpi_plc_variable_write_config(cmd);
+        break;
+
+      case pilot_cmd_type_module_status_get:
+        pilot_rpi_module_status_get(slot, cmd);
+      break;
+
+      case pilot_cmd_type_module_status_set:
+        pilot_rpi_module_status_set(slot, cmd);
+      break;       
+
       case pilot_cmd_type_fpga_state:
-      pilot_rpi_fpga_state_set(cmd);
+        pilot_rpi_fpga_state_set(cmd);
       break;
 
       case pilot_cmd_type_fpga_cmd:
-      pilot_rpi_fpga_cmd(cmd);
+        pilot_rpi_fpga_cmd(cmd);
       break;
 
       case pilot_cmd_type_comm_stats_get:
-      pilot_rpi_comm_stats(cmd);
+        pilot_rpi_comm_stats(cmd);
       break;
 
       case pilot_cmd_type_fwinfo:
-      pilot_rpi_fwinfo_cmd(cmd);
+        pilot_rpi_fwinfo_cmd(cmd);
       break;
+
+      case pilot_cmd_type_uart_mode_get:
+        pilot_rpi_uart_mode_get(cmd);
+      break;
+
+      case pilot_cmd_type_uart_mode_set:
+        pilot_rpi_uart_mode_set(cmd);
+      break;
+
       default: break;
     }
 }

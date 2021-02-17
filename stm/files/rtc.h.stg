@@ -35,7 +35,7 @@ m(name) ::= "m_<name>"
 RenderBody(model) ::= <<
 #include "stm32_conf.h"
 #include "types.h"
-#include "pilot_usart.h"
+#include "pilot_uart.h"
 #include \<stdio.h>
 #include \<string.h>
 
