@@ -1,4 +1,6 @@
 #include "module.h"
+#include "common_base.h"
+#include "pilot_comm.h"
 
 modules_t module_info, previous_module_info;
 
@@ -25,6 +27,17 @@ void pilot_set_module_status(uint8_t slot, int32_t value)
   }
 }
 
+void send_module_status(uint8_t slot, int status)
+{
+  pilot_cmd_t cmd; 
+  cmd.type = pilot_cmd_type_module_status_get;
+  cmd.target = target_t_from_module_slot_and_port(slot,module_port_1);
+
+  memcpy(cmd.data, &status, 4);
+  cmd.length = MSG_LEN(4);
+  pilot_comm_send_cmd(&cmd);
+}
+
 int8_t pilot_module_status_changed(uint8_t slot)
 {
   int8_t changed = 0;
@@ -34,9 +47,15 @@ int8_t pilot_module_status_changed(uint8_t slot)
     $model.Modules:{module|
     case $module.slot$:
       if (module_info.m$module.Slot$_status > 0 && previous_module_info.m$module.Slot$_status == 0)
+      {
         changed = 1;
+        send_module_status($module.Slot$, module_info.m$module.Slot$_status);
+      \}
       else if (module_info.m$module.Slot$_status == 0 && previous_module_info.m$module.Slot$_status > 0)
+      {
         changed = -1; 
+        send_module_status($module.Slot$, module_info.m$module.Slot$_status);
+      \}
       previous_module_info.m$module.Slot$_status = module_info.m$module.Slot$_status;
       break;
     };separator="\n"$

@@ -10,6 +10,7 @@ $model.Modules:{module|
 };separator="\n"$
 } modules_t;
 
+void send_module_status(uint8_t slot, int status);
 int32_t pilot_get_module_status(uint8_t slot);
 void pilot_set_module_status(uint8_t slot, int32_t value);
 int8_t pilot_module_status_changed(uint8_t slot);

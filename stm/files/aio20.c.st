@@ -117,7 +117,8 @@ bool pilot_$aio20.Name$_init()
   MAX11300init();
 
   /* check if communication is working */
-  return (read_register(0, dev_id) == 0x424);
+
+  return (aio20_get_device_id($aio20.Slot$) == 0x424);
 \}
 
 };separator="\n"$
@@ -288,16 +289,16 @@ CmdResult single_ended_adc_read(uint8_t slot, MAX11300_Ports port, uint16_t *dat
 
 uint16_t aio20_get_device_id(uint8_t slot)
 {
-  uint16_t dev_id;
+  uint16_t dev_id_value;
 
   //read device id
   pilot_spi_set_cs(slot_to_spi[slot], chip_select_enable);
-  pilot_spi_dataexchange(slot_to_spi[slot], MAX11300Addr_SPI_Read(dev_id));
-  dev_id = pilot_spi_dataexchange(slot_to_spi[slot], 0x0) << 8; 
-  dev_id |= pilot_spi_dataexchange(slot_to_spi[slot], 0x1); 
+  pilot_spi_dataexchange(slot_to_spi[slot], MAX11300Addr_SPI_Read(0x0)); //dev_id
+  dev_id_value = pilot_spi_dataexchange(slot_to_spi[slot], 0x0) << 8; 
+  dev_id_value |= pilot_spi_dataexchange(slot_to_spi[slot], 0x1); 
   pilot_spi_set_cs(slot_to_spi[slot], chip_select_disable);
 
-  return dev_id;
+  return dev_id_value;
 }
 
 int single_ended_adc_read_all(uint8_t slot, uint8_t *data)

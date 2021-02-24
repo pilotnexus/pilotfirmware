@@ -6,6 +6,8 @@
 #include <errno.h>
 #include <string.h>
 #include <module.h>
+#include <plc.h>
+#include "main.h"
 
 /* raspberry pi serial port uses USART1 */
 
@@ -21,6 +23,9 @@ static void pilot_usart_configure_usart(void);
 #define GPIO_Pin_pilot_usart_Tx_Source GPIO_PinSource9
 
 static uart_internals_t uart_internals = {0};
+
+extern int plc_state;
+extern cycletimes_t cycles;
 
 //DMA channel 2 -> SPI1_RX (MOSI)
 static DMA_InitTypeDef UART_DMA_InitStructure_rx;
@@ -319,50 +324,192 @@ int base64_encode_send( const uint8_t *src, size_t slen )
     return( 0 );
 }
 
-void pilot_uart_comm(uint64_t cycle, uint64_t us) {
+//stream encoding variables
+uint8_t C1, C2, C3, b64_step;
+
+void base64_encode_byte(uint8_t c)
+{
+    switch (b64_step)
+    {
+        case 0:
+          C1 = c;
+          _putchar(base64_enc_map[(C1 >> 2) & 0x3F]);
+          b64_step++;
+          break;
+        case 1:
+          C2 = c;
+          _putchar(base64_enc_map[(((C1 &  3) << 4) + (C2 >> 4)) & 0x3F]);
+          b64_step++;
+          break;
+        case 2:
+          C3 = c;
+          _putchar(base64_enc_map[(((C2 & 15) << 2) + (C3 >> 6)) & 0x3F]);
+          _putchar(base64_enc_map[C3 & 0x3F]);
+          b64_step = 0;
+          break;
+    }
+}
+
+void base64_end_encode()
+{
+
+    switch(b64_step)
+    {
+      case 1:
+        C2 = 0; C3 = 0;
+        _putchar(base64_enc_map[(((C1 &  3) << 4) + (C2 >> 4)) & 0x3F]);
+        _putchar('=');
+        _putchar('=');
+      break;
+      case 2:
+        C3 = 0;
+        _putchar(base64_enc_map[(((C2 & 15) << 2) + (C3 >> 6)) & 0x3F]);
+        _putchar('=');
+      break;
+    }
+    
+    b64_step = 0;
+}
+
+
+void send_var_debug_data(uint64_t us) 
+{
+  int size = 0, i, j;
+  uint8_t buf[MAX_PLC_VAR_LEN];
+  uint8_t *us_ptr = (uint8_t *)&us;
+  uint16_t varcount=0;
+
+  for (i = 0; i < uart_internals.uart_mode; i++)
+  {
+    size = plc_read_from_variable(uart_internals.uart_var_num, 0, buf, 0);
+    if (size == 0)
+    {
+      uart_internals.uart_var_num = 0;
+      break;
+    }
+    else if (size > 0) 
+    {
+      if (varcount==0)
+      {
+        _putchar('&'); //start of message
+        for (j = 0; j < sizeof(us); j++)
+          base64_encode_byte(*(us_ptr+j));
+      }
+
+      //encode varnumber
+      base64_encode_byte(uart_internals.uart_var_num & 0xFF);
+      base64_encode_byte(uart_internals.uart_var_num >> 8);
+      //encode variable
+      for (j = 0; j < size; j++)
+        base64_encode_byte(buf[j]);
+
+      uart_internals.uart_var_num++; //next variable
+      varcount++;
+    }
+  }
+
+  if (varcount > 0) //we have transmitted something
+  {
+    base64_end_encode();
+    _putchar('\n'); //end of line
+  }
+}
+
+void send_module_debug_data(uint64_t cycle, uint64_t us) 
+{
+  int i;
+  uint8_t *p;
+
+  //transmit module debug data
+  _putchar('*'); //start debug message
+
+  //send cycle
+  p = (uint8_t *)&cycle;
+  for (i=0;i<sizeof(cycle);i++)
+    base64_encode_byte(*p++);
+  
+  //send us
+  p = (uint8_t *)&us;
+  for (i=0;i<sizeof(us);i++)
+    base64_encode_byte(*p++);
+  
+  //send current cycle time
+  p = (uint8_t *)&cycles.cycle_current;
+  for (i=0;i<2;i++)
+    base64_encode_byte(*p++);
+
+  //send plc state
+  p = (uint8_t *)&plc_state;
+  for (i=0;i<4;i++)
+    base64_encode_byte(*p++);
+
+  //send module state 
+  p = (uint8_t *)get_module_info();
+  for (i=0;i<sizeof(modules_t);i++)
+    base64_encode_byte(*p++);
+  
+  //send module memory map
+  p = (uint8_t *)_get_plc_mem_devices_struct();
+  for (i=0;i<sizeof(plc_dev_t);i++)
+    base64_encode_byte(*p++);
+  
+  base64_end_encode();
+
+  _putchar('\n'); //end debug message
+
+  uart_internals.debug_cycle_skip_count = 0;
+}
+
+void pilot_uart_comm(uint64_t cycle, uint64_t us) 
+{
   //RX
   int remaining = 0, i=0;
   int cndtr = DMA1_Channel5->CNDTR;
-  uint8_t *plc_mem;
-  uint8_t header[20+sizeof(modules_t)];
 
   while (uart_internals.uart_rx_remain != cndtr)
   {
     remaining = UART_RX_BUFFER_SIZE - uart_internals.uart_rx_remain;
-    _putchar(uart_internals.uart_rx_array[remaining]);
+    //TODO Process incoming message
+    //_putchar(uart_internals.uart_rx_array[remaining]);
     uart_internals.uart_rx_remain--; 
   } 
 
-
   //TX
-  if (uart_internals.transmitting && DMA_GetFlagStatus(DMA1_FLAG_TC4) == SET ) {
+  if (uart_internals.transmitting && DMA_GetFlagStatus(DMA1_FLAG_TC4) == SET || DMA_GetFlagStatus(DMA1_FLAG_TE4)) {
     //DMA_Cmd(DMA1_Channel4, DISABLE);  //disable DMA
     DMA1_Channel4->CCR &= ~DMA_CCR1_EN;      // disable DMA
+    DMA_ClearFlag(DMA1_FLAG_TE4);
+  }
+  
+  if(!(DMA1_Channel4->CCR & DMA_CCR1_EN))
+  {
     uart_internals.transmitting = false;
   }
 
-  if (uart_internals.uart_mode == 1) //uart debug mode
+  if (!uart_internals.transmitting) //not transmitting
   {
-    if (!uart_internals.transmitting) //not transmitting
+    if (uart_internals.uart_mode == 1) //uart module debug mode
     {
-      //transmit debug data
-      _putchar('*'); //start debug message
-      memcpy(header, &cycle, sizeof(cycle));
-      memcpy(&header[8], &us, sizeof(us));
-      memcpy(&header[16], &uart_internals.debug_cycle_skip_count, sizeof(uart_internals.debug_cycle_skip_count));
-      memcpy(&header[20], get_module_info(), sizeof(modules_t));
-      base64_encode_send(header, sizeof(header));
-      base64_encode_send((uint8_t *)_get_plc_mem_devices_struct(), sizeof(plc_dev_t));
-      _putchar('\n'); //end debug message
-
-      uart_internals.debug_cycle_skip_count = 0;
+      send_module_debug_data(cycle, us);
     }
-    else
-    { //we skip this cycle since we are still transmitting
-       uart_internals.debug_cycle_skip_count++; 
-
+    else if (uart_internals.uart_mode > 1) //uart module and vars debug mode
+    {
+      switch (uart_internals.uart_mode_state)
+      {
+        case 0:
+          send_module_debug_data(cycle, us);
+          uart_internals.uart_mode_state = 1;
+        break;
+        case 1:
+          send_var_debug_data(us);
+          uart_internals.uart_mode_state = 0;
+        break;
+      }
     }
-
+  }
+  else
+  { //we skip this cycle since we are still transmitting
+    uart_internals.debug_cycle_skip_count++; 
   }
 
   //No DMA transfer in progress and data in buffer

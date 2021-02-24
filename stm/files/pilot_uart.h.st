@@ -20,6 +20,8 @@ typedef struct {
   bool transmitting;
 
   uint8_t uart_mode;
+  uint8_t uart_mode_state;
+  uint16_t uart_var_num;
   uint32_t debug_cycle_skip_count;
 } uart_internals_t;
 
