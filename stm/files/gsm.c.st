@@ -74,7 +74,7 @@ bool pilot_$gsm.Name$_get_enable()
   return GPIO_ReadOutputDataBit($gsm.ResetGpio$, $gsm.ResetPin$) == Bit_RESET;
 \}
 
-void pilot_$gsm.Name$_init()
+int pilot_$gsm.Name$_init()
 {
   /* initialize the gpio clocks */
   pilot_$gsm.Name$_gpio_init_clock();
@@ -90,6 +90,13 @@ void pilot_$gsm.Name$_init()
 
   /* enable the gsm */
   //pilot_$gsm.Name$_set_enable(true);
+
+  return 0;
+\}
+
+int pilot_$gsm.Name$_check()
+{
+  return 0;
 \}
 
 }; separator = "\n"$

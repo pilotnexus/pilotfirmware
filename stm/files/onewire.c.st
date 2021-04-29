@@ -31,7 +31,7 @@ void pilot_$ow.Name$_init_gpio()
 
 \}
 
-void pilot_$ow.Name$_init() 
+int pilot_$ow.Name$_init() 
 {
   /* enable the clocks */
   pilot_$ow.Name$_init_clocks();
@@ -42,6 +42,12 @@ void pilot_$ow.Name$_init()
   /* enable the one wire module */
   pilot_$ow.Name$_set_enable(1);
 \}
+
+int pilot_$ow.Name$_check() 
+{
+  return 0;
+\}
+
 
 void pilot_$ow.Name$_set_enable(int enable)
 {

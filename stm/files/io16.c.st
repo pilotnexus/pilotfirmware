@@ -432,6 +432,13 @@ int pilot_$io16.Name$_init()
   return ret;
 \}
 
+int pilot_$io16.Name$_check()
+{
+  //TODO ?
+  return 0;
+\}
+
+
 };separator="\n"$
 
 

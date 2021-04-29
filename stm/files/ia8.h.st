@@ -6,6 +6,9 @@
 #include "spi.h"
 
 $model.IA8s:{ia8|
+
+int plc_$ia8.Name$_init();
+int plc_$ia8.Name$_check();
 /* slot */
 void pilot_$ia8.Name$_get_values(int input_index, int count, uint16_t* value, int minDelta);
 void pilot_$ia8.Name$_get_value(int input_index, uint16_t* value);

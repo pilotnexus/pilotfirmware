@@ -19,7 +19,7 @@ void plc_write_outputs()
   plc_mem_to_dev();
 }
 
-void plc_internal_init(int *plc_state, void (*main_loop)(void *)) 
+void plc_internal_init(void (*main_loop)(void *)) 
 {
   plc_init_dev();
   plc_init(main_loop);

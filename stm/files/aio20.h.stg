@@ -32,7 +32,8 @@ m(name) ::= "m_<name>"
 AIO20(aio20) ::= <<
 
 /* initializes the aio20 module */
-bool pilot_<aio20.Name>_init(void);
+int pilot_<aio20.Name>_init(void);
+int pilot_<aio20.Name>_check(void);
 int pilot_<aio20.Name>_set_irq_handled(void);
 >>
 

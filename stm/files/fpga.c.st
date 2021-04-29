@@ -59,7 +59,7 @@ static void pilot_$fpga.Name$_init_gpio()
 
 \}
 
-void pilot_$fpga.Name$_init()
+int pilot_$fpga.Name$_init()
 {
   GPIO_InitTypeDef gpio;
   gpio.GPIO_Speed = GPIO_Speed_50MHz;
@@ -100,7 +100,14 @@ void pilot_$fpga.Name$_init()
 
   //test only
   //pilot_$fpga.Name$_read_flash_id();
+  return 0; //TODO: read_flash_id as startup check
 \}
+
+int pilot_$fpga.Name$_check()
+{
+  return 0; //TODO: read_flash_id as startup check
+\}
+
 
 void pilot_$fpga.Name$_send_char(module_port_t port, uint16_t c)
 {

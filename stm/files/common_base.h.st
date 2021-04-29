@@ -315,8 +315,10 @@ typedef enum
 
 typedef enum
 {
-  pilot_plc_state_stop = 0,
-  pilot_plc_state_run = 1
+  pilot_plc_state_watchdog_reset = -2,
+  pilot_plc_state_module_error = -1,
+  pilot_plc_state_run = 0,
+  pilot_plc_state_stop = 1
 } pilot_plc_state_t;
 
 typedef enum

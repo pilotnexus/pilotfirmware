@@ -12,7 +12,8 @@ typedef struct {
 $model.SLCDs:{slcd|
 
 /* initialize the slcd */
-void pilot_$slcd.Name$_init();
+int pilot_$slcd.Name$_init();
+int pilot_$slcd.Name$_check();
 
 /* sets the resolution of the display */
 void pilot_$slcd.Name$_set_resolution(const slcd_resolution_t *resolution);

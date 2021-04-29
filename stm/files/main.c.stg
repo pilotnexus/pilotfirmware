@@ -48,6 +48,7 @@ Render(model) ::= <<
 #include "plc.h"
 #include \<limits.h>
 #include "stm32_conf.h"
+#include "pilot_config.h"
 #include "gpio_config.h"
 #include "delay.h"
 #include "it_callback.h"
@@ -80,8 +81,6 @@ unsigned long long __tick;
 
 cycletimes_t cycles;
 
-// plc_state
-int plc_state;
 
 // module info
 modules_t module_info;
@@ -246,18 +245,20 @@ static void pilot_main_loop(void *state)
 
   // plc_state, if watchdog reset occured, don't start the plc loop
   if (RCC_GetFlagStatus(RCC_FLAG_IWDGRST) || RCC_GetFlagStatus(RCC_FLAG_WWDGRST)) 
-    plc_state = 0;
+    pilot_set_plc_state((int32_t)pilot_plc_state_watchdog_reset);
   else
-    plc_state = 1;
-
-  pilot_rpi_plc_state_get(); //Send PLC state
+    pilot_set_plc_state((int32_t)pilot_plc_state_run);
   
-  printf("entering main loop\r\n");
+  RCC_ClearFlag();
+
+  pilot_loop_pre_init();
 
   while(1)
   {
     //DWT_CycCounterClear();
     cycle_start = GetCycleCount64();
+
+    pilot_loop_head();
 
     pilot_handle_received_data();
     pilot_handle_module_inputs_changed();
@@ -266,7 +267,7 @@ static void pilot_main_loop(void *state)
     cycles.cycle_current_comm = GetCycleCount64();
 
     //if plc is enabled, run plc code
-    if (plc_state == 1)
+    if (pilot_get_plc_state() == (int32_t)pilot_plc_state_run)
     {
       //read inputs
       plc_read_inputs();
@@ -293,6 +294,8 @@ static void pilot_main_loop(void *state)
 
     pilot_uart_comm(GetCycleCount64(), us);
     
+    pilot_loop_tail();
+    
     //update cycle time
     cycles.cycle_start = cycle_start; //value is used in pilot_handle_received_data / communication. Save the offset for that.
     cycles.cycle_current = GetCycleCount64() - cycles.cycle_start;
@@ -303,6 +306,8 @@ static void pilot_main_loop(void *state)
 
 int main(void)
 {
+  int init_status = 0;
+
   /* initialize tick variables */
   initialize_tick();
 
@@ -330,8 +335,8 @@ int main(void)
   /* output the module uids */
   pilot_send_eeprom_uids();
 
-  /* enable the rtc */
-  //rtc_init();
+  /* run configuration settings */
+  pilot_config_init();
 
 <if(model.SPIs)>
   /* initialize spi */
@@ -342,70 +347,14 @@ int main(void)
   /* initialize usarts */
   <model.Usarts:{usart|pilot_<usart.Name>_init();};separator="\n">
 <endif>
-  
+
 <if(model.Pwms)>
   /* initialize pwms */
-  <model.Pwms:{pwm|<pwm.Name>_init();};separator="\n">
+  <model.Pwms:{pwm|pilot_<pwm.Name>_init();};separator="\n">
 <endif>
 
-<if(model.I8s)>
-  /* initialize the i8s */
-  <model.I8s:{i8|pilot_<i8.Name>_init();};separator="\n">
-<endif>
-
-<if (model.O8s)>
-  /* initialize the o8s */
-  <model.O8s:{o8|pilot_<o8.Name>_init();};separator="\n">
-<endif>
-
-<if (model.Demos)>
-  /* initialize the Demos */
-  <model.Demos:{demo|pilot_<demo.Name>_init();};separator="\n">
-<endif>
-
-<if(model.Counter8s)>
-  /* initialize the counters */
-  <model.Counter8s:{counter|pilot_<counter.Name>_init();};separator="\n">
-<endif>
-
-<if(model.GPSs)>
-  /* initialize the gps */
-  <model.GPSs:{gps|pilot_<gps.Name>_init();};separator="\n">
-<endif>
-
-<if(model.LORAs)>
-  /* initialize the lora */
-  <model.LORAs:{lora|pilot_<lora.Name>_init();};separator="\n">
-<endif>
-
-<if (model.GSMs)>
-  /* initialize the gsm */
-  <model.GSMs:{gsm|pilot_<gsm.Name>_init();};separator="\n">
-<endif>
-
-<if(model.IO16s)>
-  /* initialize the io16 */
-  <model.IO16s:{io16|pilot_<io16.Name>_init();};separator="\n">
-<endif>
-
-<if(model.OneWires)>
-  /* intialize the one wire */
-  <model.OneWires:{ow|pilot_<ow.Name>_init();};separator="\n">
-<endif>
-
-<if(model.SLCDs)>
-  /* initialize the sharp lcd driver */
-  <model.SLCDs:{slcd|pilot_<slcd.Name>_init();};separator="\n">
-<endif>
-
-<if(model.FPGAs)>
-  /* initialize the FPGA driver */
-  <model.FPGAs:{fpga|pilot_<fpga.Name>_init();};separator="\n">
-<endif>
-
-<if(model.AIO20s)>
-  <model.AIO20s:{aio20|pilot_<aio20.Name>_init();};separator="\n">
-<endif>
+  /* init modules */
+  pilot_modules_init();
 
 <if(model.IsTest)>
   /* initialize the test */
@@ -413,7 +362,7 @@ int main(void)
 <endif>
 
   //init plc and then start main loop
-  plc_internal_init(&plc_state, pilot_main_loop);
+  plc_internal_init(pilot_main_loop);
 }
 
 ////////////////////////////////////

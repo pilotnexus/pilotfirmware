@@ -80,11 +80,13 @@ static void $pwm.Name$_configure_tim()
   TIM_CtrlPWMOutputs($pwm.TIM$, ENABLE);
 \}
 
-void $pwm.Name$_init()
+int pilot_$pwm.Name$_init()
 {
   $pwm.Name$_configure_clock();
   $pwm.Name$_configure_gpio();
   $pwm.Name$_configure_tim();
+
+  return 0;
 \}
 
 };separator="\n"$

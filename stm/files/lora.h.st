@@ -7,7 +7,8 @@
 
 $model.LORAs:{lora|
 
-void pilot_$lora.Name$_init(void);
+int pilot_$lora.Name$_init(void);
+int pilot_$lora.Name$_check(void);
 void pilot_$lora.Name$_set_enable(int enable);
 int pilot_$lora.Name$_get_enable(void);
 

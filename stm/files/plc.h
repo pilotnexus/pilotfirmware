@@ -37,7 +37,7 @@ typedef struct __attribute__((__packed__)) {
 } msg_plc_var_t;
 
 void plc_init(void (*main_loop)());
-void plc_internal_init(int *plc_state, void (*main_loop)(void *));
+void plc_internal_init(void (*main_loop)(void *));
 void plc_read_inputs();
 void plc_write_outputs();
 void plc_run(void *state, uint64_t tick_us);

@@ -32,7 +32,8 @@ m(name) ::= "m_<name>"
 FPGA(fpga) ::= <<
 
 /* initializes the i8 module */
-void pilot_<fpga.Name>_init(void);
+int pilot_<fpga.Name>_init(void);
+int pilot_<fpga.Name>_check(void);
 int pilot_<fpga.Name>_set_irq_handled(void);
 void pilot_<fpga.Name>_send_char(module_port_t port, uint16_t c);
 void pilot_<fpga.Name>_send(uint8_t *buffer, int length);

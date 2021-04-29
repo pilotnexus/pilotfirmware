@@ -33,6 +33,7 @@ I8(i8) ::= <<
 
 /* initializes the i8 module */
 void pilot_<i8.Name>_init(void);
+void pilot_<i8.Name>_check(void);
 
 /* send the state of the input to the rpi */
 uint8_t <i8.Name>_get_state(uint8_t input);

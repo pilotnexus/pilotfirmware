@@ -18,6 +18,16 @@ d2 d1 d0 channel
 1  1  1       7
 */
 
+int pilot_$ia8.Name$_init()
+{
+  return 0;
+\}
+
+int pilot_$ia8.Name$_check()
+{
+  return 0;
+\}
+
 void pilot_$ia8.Name$_get_value(int input_index, uint16_t* value)
 {
   uint8_t b1, b2;

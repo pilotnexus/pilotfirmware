@@ -19,6 +19,8 @@ void plc_check_modules()
 
 void plc_dev_to_mem()
 {
+  // check modules
+  plc_check_modules();
 }
 
 void plc_mem_to_dev()

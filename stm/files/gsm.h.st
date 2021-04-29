@@ -8,7 +8,8 @@
 
 $model.GSMs:{gsm|
 
-void pilot_$gsm.Name$_init(void);
+int pilot_$gsm.Name$_init(void);
+int pilot_$gsm.Name$_check(void);
 void pilot_$gsm.Name$_set_enable(bool enable);
 bool pilot_$gsm.name$_get_enable(void);
 

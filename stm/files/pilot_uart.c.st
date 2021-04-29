@@ -1,4 +1,5 @@
 #include "pilot_uart.h"
+#include "pilot_config.h"
 #include "plc_memory.h"
 #include "types.h"
 #include <stdarg.h>
@@ -8,6 +9,7 @@
 #include <module.h>
 #include <plc.h>
 #include "main.h"
+#include "printf.h"
 
 /* raspberry pi serial port uses USART1 */
 
@@ -24,7 +26,8 @@ static void pilot_usart_configure_usart(void);
 
 static uart_internals_t uart_internals = {0};
 
-extern int plc_state;
+extern bool uart_echo_on;
+extern int32_t plc_state;
 extern cycletimes_t cycles;
 
 //DMA channel 2 -> SPI1_RX (MOSI)
@@ -199,7 +202,7 @@ static void uart_dma_init()
 static void uart_dma_tx()
 {
   //DMA_Cmd(DMA1_Channel4,DISABLE);
-     
+
   USART_DMACmd(USART1, USART_DMAReq_Tx, ENABLE);
 
   DMA1_Channel4->CPAR = (uint32_t)&USART1->DR;           // 1. Write USART_DR
@@ -268,7 +271,7 @@ bool _putchars(char *c, int length)
   int i;
   for (i = 0; i < length; i++)
     _putchar(c[i]);
-  
+
   return true;
 }
 
@@ -367,7 +370,7 @@ void base64_end_encode()
         _putchar('=');
       break;
     }
-    
+
     b64_step = 0;
 }
 
@@ -427,12 +430,12 @@ void send_module_debug_data(uint64_t cycle, uint64_t us)
   p = (uint8_t *)&cycle;
   for (i=0;i<sizeof(cycle);i++)
     base64_encode_byte(*p++);
-  
+
   //send us
   p = (uint8_t *)&us;
   for (i=0;i<sizeof(us);i++)
     base64_encode_byte(*p++);
-  
+
   //send current cycle time
   p = (uint8_t *)&cycles.cycle_current;
   for (i=0;i<2;i++)
@@ -447,17 +450,86 @@ void send_module_debug_data(uint64_t cycle, uint64_t us)
   p = (uint8_t *)get_module_info();
   for (i=0;i<sizeof(modules_t);i++)
     base64_encode_byte(*p++);
-  
+
   //send module memory map
   p = (uint8_t *)_get_plc_mem_devices_struct();
   for (i=0;i<sizeof(plc_dev_t);i++)
     base64_encode_byte(*p++);
-  
+
   base64_end_encode();
 
   _putchar('\n'); //end debug message
 
   uart_internals.debug_cycle_skip_count = 0;
+}
+
+bool pilot_uart_send_module_status(uint8_t module_nr, int status)
+{
+  char buf[30];
+  if (module_nr < 4) //TODO: replace with dynamic module count
+  {
+    _putchars(buf, snprintf(buf, 30, ":M%d=%d\r\n", module_nr+1, status));
+    return true;
+  }
+  return false;
+}
+
+bool pilot_uart_send_plc_state()
+{
+  char buf[30];
+  _putchars(buf, snprintf(buf, 30, ":S=%d\r\n", plc_state));
+  return true;
+}
+
+void process_uart_message()
+{
+  bool isOk = false;
+
+  if (memcmp(uart_internals.cmd_rx_buf, "ECHO=", 5) == 0)
+  { //echo mode
+     if (memcmp(&uart_internals.cmd_rx_buf[5], "ON", 2) == 0)
+     {
+       uart_echo_on = true;
+       isOk = true;
+     }
+     else if (memcmp(&uart_internals.cmd_rx_buf[5], "OFF", 3) == 0)
+       {
+         uart_echo_on = false;
+         isOk = true;
+       }
+  }
+  else if (uart_internals.cmd_rx_buf[0] == 'M')
+  {
+    uint8_t module_nr = uart_internals.cmd_rx_buf[1] - 0x30;
+    if (uart_internals.cmd_rx_buf[2] == '?') 
+    {
+      isOk = pilot_uart_send_module_status(module_nr-1, pilot_get_module_status(module_nr-1));
+    }
+    else if (uart_internals.cmd_rx_buf[2] == '=')
+    {
+      //parse input, currently only one digit
+      int new_module_status = uart_internals.cmd_rx_buf[3] - 0x30; 
+      pilot_set_module_status(module_nr-1, new_module_status);
+      isOk = true;
+    }
+  } 
+  else if (uart_internals.cmd_rx_buf[0] == 'S')
+  {
+    if (uart_internals.cmd_rx_buf[1] == '?') 
+    {
+      isOk = pilot_uart_send_plc_state();
+    }
+    else if (uart_internals.cmd_rx_buf[1] == '=')
+    {
+      //TODO: parse input, currently only one digit
+      int32_t new_plc_status = uart_internals.cmd_rx_buf[2] - 0x30; 
+      pilot_set_plc_state(new_plc_status);
+      isOk = true;
+    }
+  }
+  
+  if (!isOk)
+    send_uart_data((uint8_t *)"ERR\r\n", 6);
 }
 
 void pilot_uart_comm(uint64_t cycle, uint64_t us) 
@@ -466,13 +538,38 @@ void pilot_uart_comm(uint64_t cycle, uint64_t us)
   int remaining = 0, i=0;
   int cndtr = DMA1_Channel5->CNDTR;
 
+  __disable_irq();
   while (uart_internals.uart_rx_remain != cndtr)
   {
     remaining = UART_RX_BUFFER_SIZE - uart_internals.uart_rx_remain;
-    //TODO Process incoming message
-    //_putchar(uart_internals.uart_rx_array[remaining]);
+
+    if (uart_echo_on)
+      _putchar(uart_internals.uart_rx_array[remaining]);
+    
+    if (uart_internals.uart_rx_array[remaining] != '\n') //ignore this
+    {
+      if (uart_internals.uart_rx_array[remaining] == '\r') //msg complete
+      {
+        process_uart_message();
+        uart_internals.cmd_rx_buf_index = 0;
+      } 
+      else if (uart_internals.cmd_rx_buf_index < UART_RX_MSG_SIZE)
+      {
+        uart_internals.cmd_rx_buf[uart_internals.cmd_rx_buf_index++] = uart_internals.uart_rx_array[remaining];
+      }
+      else
+      { //overflow, reset position?
+        uart_internals.cmd_rx_buf_index = 0;
+      }
+    }
+
     uart_internals.uart_rx_remain--; 
+    if (uart_internals.uart_rx_remain == 0)
+    {
+      uart_internals.uart_rx_remain = UART_RX_BUFFER_SIZE;
+    }
   } 
+  __enable_irq();
 
   //TX
   if (uart_internals.transmitting && DMA_GetFlagStatus(DMA1_FLAG_TC4) == SET || DMA_GetFlagStatus(DMA1_FLAG_TE4)) {
@@ -480,7 +577,7 @@ void pilot_uart_comm(uint64_t cycle, uint64_t us)
     DMA1_Channel4->CCR &= ~DMA_CCR1_EN;      // disable DMA
     DMA_ClearFlag(DMA1_FLAG_TE4);
   }
-  
+
   if(!(DMA1_Channel4->CCR & DMA_CCR1_EN))
   {
     uart_internals.transmitting = false;
@@ -581,6 +678,15 @@ void pilot_uart_mode_set(int mode)
 {
   uart_internals.uart_mode = mode;
   void pilot_usart_init();
+}
+
+void send_uart_data(uint8_t *buf, int len)
+{
+  _putchar(':'); //end debug message
+  for (int i=0; i < len; i++)
+    _putchar(buf[i]);
+  _putchar('\r'); //end debug message
+  _putchar('\n'); //end debug message
 }
 
 /* END Rpi functions */

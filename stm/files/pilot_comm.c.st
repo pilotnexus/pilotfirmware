@@ -1271,7 +1271,7 @@ $model.Modules:{m|
 }
 
 /* global plc variables */
-extern int plc_state;
+extern int32_t plc_state;
 extern cycletimes_t cycles;
 extern unsigned long long __tick;
 
@@ -1281,14 +1281,17 @@ void pilot_rpi_plc_state_get()
   memset(&cmd, 0, sizeof(pilot_cmd_t));
   cmd.target = target_base;
   cmd.type = pilot_cmd_type_plc_state_get;
-  cmd.data[(int)pilot_plc_state_index] = plc_state;
+  memcpy(&cmd.data[(int)pilot_plc_state_index], &plc_state, sizeof(plc_state));
   cmd.length = MSG_LEN(4);
   pilot_comm_send_cmd(&cmd);
 }
 
 static void pilot_rpi_plc_state_set(pilot_cmd_t *cmd)
 {
-  plc_state = (int)cmd->data[(int)pilot_plc_state_index];
+  memcpy(&plc_state, &cmd->data[(int)pilot_plc_state_index], sizeof(plc_state));
+  
+  //send plc state to uart
+  pilot_uart_send_plc_state();
 }
 
 static void pilot_rpi_plc_cycletimes_get()
@@ -1531,6 +1534,9 @@ static void pilot_rpi_module_status_set(module_slot_t slot, pilot_cmd_t *cmd)
   memcpy(&status, cmd->data, 4);
   pilot_set_module_status(slot, status);
   pilot_comm_send_cmd(cmd);
+
+  //send update to uart
+  pilot_uart_send_module_status(slot, status);
 }
 
 static void pilot_pilot_comm_spi_handle_cmd_complete(pilot_cmd_t *cmd)

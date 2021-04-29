@@ -36,11 +36,18 @@ $o8.Outputs:{p|
 \}
 
 /* initializes the o8 module */
-void pilot_$o8.Name$_init()
+int pilot_$o8.Name$_init()
 {
   pilot_$o8.Name$_configure_clocks();
   pilot_$o8.Name$_configure_gpios();
+  return 0;
 \}
+
+int pilot_$o8.Name$_check()
+{
+  return 0;
+\}
+
 
 /* send the state of the output to the rpi */
 uint8_t pilot_$o8.Name$_get_value(uint8_t output)

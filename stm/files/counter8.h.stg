@@ -30,6 +30,7 @@ Render(model) ::= <<
 counter8(counter8) ::= <<
 
 void pilot_<counter8.Name>_init(void);
+void pilot_<counter8.Name>_check(void);
 void pilot_<counter8.Name>_get_counter_cmd(pilot_cmd_t* cmd, int counter_index);
 void pilot_<counter8.Name>_increment_counter(int counter_index);
 void pilot_<counter8.Name>_set_counter(int counter_index, uint64_t value);

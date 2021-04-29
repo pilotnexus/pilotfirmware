@@ -35,7 +35,7 @@ int pilot_$gps.Name$_get_enable()
   return GPIO_ReadOutputDataBit($gps.NResetGpio$, $gps.NResetPin$) == Bit_SET ? 1 : 0;
 \}
 
-void pilot_$gps.Name$_init(void)
+int pilot_$gps.Name$_init(void)
 {
   /* initialize the gpios */
   pilot_$gps.Name$_gpio_init();
@@ -48,6 +48,13 @@ void pilot_$gps.Name$_init(void)
 
   /* enable the gps */
   //pilot_$gps.Name$_set_enable(1);
+  
+  return 0;
+\}
+
+int pilot_$gps.Name$_check(void)
+{
+  return 0;
 \}
 
 };separator="\n"$

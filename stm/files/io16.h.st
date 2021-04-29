@@ -50,6 +50,7 @@ typedef enum
 
 $model.IO16s:{io16|
   int pilot_$io16.Name$_init(void);
+  int pilot_$io16.Name$_check(void);
   int pilot_$io16.Name$_read_register(pilot_io16_register_t reg, int count, uint8_t *value);
   int pilot_$io16.Name$_write_register(pilot_io16_register_t reg, int count, uint8_t *value);
 

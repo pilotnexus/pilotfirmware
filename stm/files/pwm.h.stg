@@ -31,7 +31,7 @@ m(name) ::= "m_<name>"
 /* declares the pwm functions */
 Pwm(pwm) ::=
 <<
-void <pwm.Name>_init(void);
+int pilot_<pwm.Name>_init(void);
 >>
 
 

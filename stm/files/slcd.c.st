@@ -139,7 +139,7 @@ static void pilot_$slcd.Name$_init_gpios()
 \}
 
 /* initialize the sharp display driver */
-void pilot_$slcd.Name$_init()
+int pilot_$slcd.Name$_init()
 {
   /* initialize the gpios */
   pilot_$slcd.Name$_init_gpios();
@@ -147,6 +147,14 @@ void pilot_$slcd.Name$_init()
   /* set some default values for line length & count */
   m_$slcd.Name$_display_buffer.resolution.width = DISPLAY_DEFAULT_WIDTH;
   m_$slcd.Name$_display_buffer.resolution.height = DISPLAY_DEFAULT_HEIGHT;
+
+  return 0;
 \}
+
+int pilot_$slcd.Name$_init()
+{
+  return 0;
+\}
+
 
 }; separator="\n"$

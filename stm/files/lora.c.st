@@ -35,7 +35,7 @@ int pilot_$lora.Name$_get_enable()
   return GPIO_ReadOutputDataBit($lora.NResetGpio$, $lora.NResetPin$) == Bit_SET ? 1 : 0;
 \}
 
-void pilot_$lora.Name$_init(void)
+int pilot_$lora.Name$_init(void)
 {
   /* initialize the gpios */
   pilot_$lora.Name$_gpio_init();
@@ -48,6 +48,13 @@ void pilot_$lora.Name$_init(void)
 
   /* enable the lora */
   //pilot_$lora.Name$_set_enable(1);
+
+  return 0;
+\}
+
+int pilot_$lora.Name$_check(void)
+{
+  return 0;
 \}
 
 };separator="\n"$

@@ -7,7 +7,8 @@
 
 $model.GPSs:{gps|
 
-void pilot_$gps.Name$_init(void);
+int pilot_$gps.Name$_init(void);
+int pilot_$gps.Name$_check(void);
 void pilot_$gps.Name$_set_enable(int enable);
 int pilot_$gps.Name$_get_enable(void);
 

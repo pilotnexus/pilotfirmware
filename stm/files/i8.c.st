@@ -35,10 +35,16 @@ $i8.Inputs:{p|
 \}
 
 /* initializes the i8 module */
-void pilot_$i8.Name$_init()
+int pilot_$i8.Name$_init()
 {
   $i8.Name$_configure_clocks();
   $i8.Name$_configure_gpios();
+  return 0;
+\}
+
+int pilot_$i8.Name$_check()
+{
+  return 0;
 \}
 
 /* send the state of the input to the rpi */

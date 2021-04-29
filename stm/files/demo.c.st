@@ -56,10 +56,16 @@ $demo.Outputs:{p|
 \}
 
 /* initializes the demo module */
-void pilot_$demo.Name$_init()
+int pilot_$demo.Name$_init()
 {
   $demo.Name$_configure_clocks();
   $demo.Name$_configure_gpios();
+  return 0;
+\}
+
+int pilot_$demo.Name$_check()
+{
+  return 0;
 \}
 
 /* send the state of the input to the rpi */

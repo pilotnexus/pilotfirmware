@@ -81,7 +81,7 @@ static void pilot_$aio20.Name$_init_gpio()
 
 \}
 
-bool pilot_$aio20.Name$_init()
+int pilot_$aio20.Name$_init()
 {
   GPIO_InitTypeDef gpio;
   gpio.GPIO_Speed = GPIO_Speed_50MHz;
@@ -118,7 +118,12 @@ bool pilot_$aio20.Name$_init()
 
   /* check if communication is working */
 
-  return (aio20_get_device_id($aio20.Slot$) == 0x424);
+  return (aio20_get_device_id($aio20.Slot$) == 0x424) ? 0 : 1;
+\}
+
+int pilot_$aio20.Name$_check()
+{
+  return (aio20_get_device_id($aio20.Slot$) == 0x424) ? 0 : 1;
 \}
 
 };separator="\n"$

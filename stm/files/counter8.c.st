@@ -83,12 +83,18 @@ $counter8.Inputs:{p|
 \}
 
 /* initializes the counter8 module */
-void pilot_$counter8.Name$_init()
+int pilot_$counter8.Name$_init()
 {
   pilot_$counter8.Name$_configure_clocks();
   pilot_$counter8.Name$_configure_gpios();
   pilot_$counter8.Name$_configure_exti();
   pilot_$counter8.Name$_configure_nvic();
+  return 0;
+\}
+
+int pilot_$counter8.Name$_check()
+{
+  return 0;
 \}
 
 /* fills the supplied cmd */
