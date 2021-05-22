@@ -5,12 +5,22 @@
 #include "pilot_comm.h"
 
 $if(model.AIO20s)$
-#include "MAX11300Hex.h"
+
+#include "aio20_config.h"
 
 extern void MAX11300init();
 $endif$
 
 extern spi_id_t slot_to_spi[];
+
+//physical IO to logical port mapping
+uint8_t io_to_port[20] = {
+  3, 1, 2, 0, 
+  6, 5, 9, 8,
+  11, 10, 14, 13,
+  16, 15, 18, 19,
+  4, 7, 12, 17
+};
 
 uint8_t currentConfigSlot = -1;
 
@@ -128,6 +138,26 @@ int pilot_$aio20.Name$_check()
 
 };separator="\n"$
 
+uint16_t get_aio20_dac_config(uint8_t slot, uint8_t port) 
+{
+  switch (slot)
+  {
+    $model.AIO20s:{aio20|case $aio20.Slot$: return aio20_$aio20.Slot$_dac[port]; break;
+    };separator="\n"$
+  }
+  return 0x0; //should never happen
+\}
+
+uint16_t get_aio20_port_config(uint8_t slot, uint8_t port) 
+{
+  switch (slot)
+  {
+    $model.AIO20s:{aio20|case $aio20.Slot$: return aio20_$aio20.Slot$_port_config[port]; break;
+    };separator="\n"$
+  }
+  return 0x71e0; //should never happen
+\}
+
 void pilot_AIO20_set_CNVT(uint8_t slot, BitAction bitVal)
 {
   switch (slot)
@@ -137,27 +167,6 @@ void pilot_AIO20_set_CNVT(uint8_t slot, BitAction bitVal)
   }
 }
 
-static const uint16_t port_config_design_vals[20] = {
-    port_cfg_00_DESIGNVALUE,
-    port_cfg_01_DESIGNVALUE,
-    port_cfg_02_DESIGNVALUE,
-    port_cfg_03_DESIGNVALUE,
-    port_cfg_04_DESIGNVALUE,
-    port_cfg_05_DESIGNVALUE,
-    port_cfg_06_DESIGNVALUE,
-    port_cfg_07_DESIGNVALUE,
-    port_cfg_08_DESIGNVALUE,
-    port_cfg_09_DESIGNVALUE,
-    port_cfg_10_DESIGNVALUE,
-    port_cfg_11_DESIGNVALUE,
-    port_cfg_12_DESIGNVALUE,
-    port_cfg_13_DESIGNVALUE,
-    port_cfg_14_DESIGNVALUE,
-    port_cfg_15_DESIGNVALUE,
-    port_cfg_16_DESIGNVALUE,
-    port_cfg_17_DESIGNVALUE,
-    port_cfg_18_DESIGNVALUE,
-    port_cfg_19_DESIGNVALUE};
 
     //*********************************************************************
 void write_register(uint8_t slot, MAX11300RegAddress_t reg, uint16_t data)
@@ -202,13 +211,15 @@ void block_read(uint8_t slot, MAX11300RegAddress_t reg, uint16_t * data, uint8_t
 }
 
 //*********************************************************************    
-CmdResult gpio_write(uint8_t slot, MAX11300_Ports port, uint8_t state)
+CmdResult gpio_write(uint8_t slot, uint8_t io, uint8_t state)
 {
     CmdResult result = OpFailure;
+    uint8_t port = io_to_port[io];
     uint16_t temp;
     uint16_t port_mask;
+    uint16_t port_config = get_aio20_port_config(slot, port);
     
-    if(((port_config_design_vals[port] & 0xF000) >> 12) == MODE_3)
+    if(((port_config & 0xF000) >> 12) == MODE_3)
     {
         if(port < PIXI_PORT16)
         {
@@ -246,11 +257,13 @@ CmdResult gpio_write(uint8_t slot, MAX11300_Ports port, uint8_t state)
 }
 
 //*********************************************************************
-CmdResult gpio_read(uint8_t slot, MAX11300_Ports port, uint8_t *state)
+CmdResult gpio_read(uint8_t slot, uint8_t io, uint8_t *state)
 {
     CmdResult result = OpFailure;
+    uint8_t port = io_to_port[io];
+    uint16_t port_config = get_aio20_port_config(slot, port);
     
-    if(((port_config_design_vals[port] & 0xF000) >> 12) == MODE_1)
+    if(((port_config & 0xF000) >> 12) == MODE_1)
     {
         if(port < PIXI_PORT16)
         {
@@ -263,18 +276,19 @@ CmdResult gpio_read(uint8_t slot, MAX11300_Ports port, uint8_t *state)
         
         result = Success;
     }
-    
     return result;
 }
 
 //*********************************************************************
-CmdResult single_ended_adc_read(uint8_t slot, MAX11300_Ports port, uint16_t *data)
+CmdResult single_ended_adc_read(uint8_t slot, uint8_t io, uint16_t *data)
 {
     CmdResult result = OpFailure;
+    uint8_t port = io_to_port[io];
+    uint16_t port_config = get_aio20_port_config(slot, port);
     
-    if(((port_config_design_vals[port] & 0xF000) >> 12) == MODE_7)
+    if(((port_config & 0xF000) >> 12) == MODE_7)
     {
-        uint8_t num_samples = ((port_config_design_vals[port] & port_cfg_00_funcprm_nsamples) >> 5);
+        uint8_t num_samples = ((port_config & port_cfg_00_funcprm_nsamples) >> 5);
         num_samples = (1 << num_samples);
         
         while(num_samples--)
@@ -325,11 +339,13 @@ int single_ended_adc_read_all(uint8_t slot, uint8_t *data)
 }
 
 //*********************************************************************
-CmdResult single_ended_dac_write(uint8_t slot, MAX11300_Ports port, uint16_t data)
+CmdResult single_ended_dac_write(uint8_t slot, uint8_t io, uint16_t data)
 {
     CmdResult result = OpFailure;
-    
-    if(((port_config_design_vals[port] & 0xF000) >> 12) == MODE_5)
+    uint8_t port = io_to_port[io];
+    uint16_t port_config = get_aio20_port_config(slot, port);
+
+    if(((port_config & 0xF000) >> 12) == MODE_5)
     {
         write_register(slot, (MAX11300RegAddress_t)(dac_data_port_00 + port) , data);
         result = Success;
@@ -338,33 +354,13 @@ CmdResult single_ended_dac_write(uint8_t slot, MAX11300_Ports port, uint16_t dat
     return result;
 }
 
-
 //*********************************************************************
 void config_process_1(uint8_t slot, uint16_t *device_control_local)
 {
     uint8_t idx;
     uint16_t port_mode;
-    uint16_t dac_data_array[20] = {
-        dac_data_port_00_DESIGNVALUE,
-        dac_data_port_01_DESIGNVALUE,
-        dac_data_port_02_DESIGNVALUE,
-        dac_data_port_03_DESIGNVALUE,
-        dac_data_port_04_DESIGNVALUE,
-        dac_data_port_05_DESIGNVALUE,
-        dac_data_port_06_DESIGNVALUE,
-        dac_data_port_07_DESIGNVALUE,
-        dac_data_port_08_DESIGNVALUE,
-        dac_data_port_09_DESIGNVALUE,
-        dac_data_port_10_DESIGNVALUE,
-        dac_data_port_11_DESIGNVALUE,
-        dac_data_port_12_DESIGNVALUE,
-        dac_data_port_13_DESIGNVALUE,
-        dac_data_port_14_DESIGNVALUE,
-        dac_data_port_15_DESIGNVALUE,
-        dac_data_port_16_DESIGNVALUE,
-        dac_data_port_17_DESIGNVALUE,
-        dac_data_port_18_DESIGNVALUE,
-        dac_data_port_19_DESIGNVALUE};
+    uint16_t port_config;
+    uint16_t port_dac;
     
     *device_control_local |= (device_control_DESIGNVALUE & (device_control_DACREF | device_control_DACCTL));
     write_register(slot, device_control, *device_control_local);
@@ -383,12 +379,14 @@ void config_process_1(uint8_t slot, uint16_t *device_control_local)
         //no
         for(idx = 0; idx < 20; idx++)
         {
-            port_mode = ((port_config_design_vals[idx] & 0xf000) >> 12);
+            port_config = get_aio20_port_config(slot, idx);
+            port_dac = get_aio20_dac_config(slot, idx);
+            port_mode = ((port_config & 0xf000) >> 12);
             if((port_mode == MODE_1) || (port_mode == MODE_3) || 
                (port_mode == MODE_4) || (port_mode == MODE_5) || 
                (port_mode == MODE_6) || (port_mode == MODE_10))
             {
-                write_register(slot, (MAX11300RegAddress_t)(dac_data_port_00 + idx), dac_data_array[idx]);
+                write_register(slot, (MAX11300RegAddress_t)(dac_data_port_00 + idx), port_dac);
             }
         }
     }
@@ -397,10 +395,10 @@ void config_process_1(uint8_t slot, uint16_t *device_control_local)
     uint8_t num_ports_mode_1 = 0;
     for(idx = 0; idx < 20; idx++)
     {
-        port_mode = ((port_config_design_vals[idx] & 0xf000) >> 12);
+        port_mode = ((port_config & 0xf000) >> 12);
         if(port_mode == MODE_1)
         {
-            write_register(slot, (MAX11300RegAddress_t)(port_cfg_00 + idx), port_config_design_vals[idx]);
+            write_register(slot, (MAX11300RegAddress_t)(port_cfg_00 + idx), port_config);
             num_ports_mode_1++;
         }
     }
@@ -414,12 +412,14 @@ void config_process_1(uint8_t slot, uint16_t *device_control_local)
     //Config FUNCID[i], FUNCPRM[i] for ports in mode 3, 4, 5, 6, or 10
     for(idx = 0; idx < 20; idx++)
     {
-        port_mode = ((port_config_design_vals[idx] & 0xf000) >> 12);
+
+        port_config = get_aio20_port_config(slot, idx);
+        port_mode = ((port_config & 0xf000) >> 12);
         if((port_mode == MODE_3) | (port_mode == MODE_4) | 
            (port_mode == MODE_5) | (port_mode == MODE_6) | 
            (port_mode == MODE_10))
         {
-            write_register(slot, (MAX11300RegAddress_t)(port_cfg_00 + idx), port_config_design_vals[idx]);
+            write_register(slot, (MAX11300RegAddress_t)(port_cfg_00 + idx), port_config);
             pilot_delay_us(1000);
         }
     }
@@ -435,23 +435,25 @@ void config_process_2(uint8_t slot, uint16_t *device_control_local)
 {
     uint8_t idx;
     uint16_t port_mode;
+    uint16_t port_config;
     
     for(idx = 0; idx < 20; idx++)
     {
-        port_mode = ((port_config_design_vals[idx] & 0xf000) >> 12); 
+        port_config = get_aio20_port_config(slot, idx);
+        port_mode = ((port_config & 0xf000) >> 12); 
         if(port_mode == MODE_9)
         {
-            write_register(slot, (MAX11300RegAddress_t)(port_cfg_00 + idx), port_config_design_vals[idx]);
+            write_register(slot, (MAX11300RegAddress_t)(port_cfg_00 + idx), port_config);
             pilot_delay_us(100);
         }
     }
     
     for(idx = 0; idx < 20; idx++)
     {
-        port_mode = ((port_config_design_vals[idx] & 0xf000) >> 12); 
+        port_mode = ((aio20_1_port_config[idx] & 0xf000) >> 12); 
         if((port_mode == MODE_7) || (port_mode == MODE_8))
         {
-            write_register(slot, (MAX11300RegAddress_t)(port_cfg_00 + idx), port_config_design_vals[idx]);
+            write_register(slot, (MAX11300RegAddress_t)(port_cfg_00 + idx), aio20_1_port_config[idx]);
             pilot_delay_us(100);
         }
     }
@@ -468,10 +470,10 @@ void config_process_3(uint8_t slot)
     
     for(idx = 0; idx < 20; idx++)
     {
-        port_mode = ((port_config_design_vals[idx] & 0xf000) >> 12); 
+        port_mode = ((aio20_1_port_config[idx] & 0xf000) >> 12); 
         if((port_mode == MODE_2) || (port_mode == MODE_11) || (port_mode == MODE_12))
         {
-            write_register(slot, (MAX11300RegAddress_t)(port_cfg_00 + idx), port_config_design_vals[idx]);
+            write_register(slot, (MAX11300RegAddress_t)(port_cfg_00 + idx), aio20_1_port_config[idx]);
         }
     }
 }
@@ -490,7 +492,7 @@ void AIO20_init(uint8_t slot)
     //figure out port modes used
     for(idx = 0; idx < 20; idx++)
     {
-        port_mode = ((port_config_design_vals[idx] & 0xf000) >> 12);
+        port_mode = ((aio20_1_port_config[idx] & 0xf000) >> 12);
         if(port_mode > 0)
         {
             mode_bit_mask |= (1 << port_mode);

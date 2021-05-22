@@ -776,7 +776,7 @@ static void pilot_pilot_comm_get_input_state_cmd(module_slot_t slot, uint8_t inp
       break;
     };separator="\n"$
     $model.AIO20s:{aio20|case $aio20.Slot$:
-      single_ended_adc_read($aio20.Slot$, (MAX11300_Ports) input, &aio_value);
+      single_ended_adc_read($aio20.Slot$, input, &aio_value);
       value = aio_value;
       break;
     };separator="\n"$
