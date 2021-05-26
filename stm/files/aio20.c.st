@@ -450,10 +450,10 @@ void config_process_2(uint8_t slot, uint16_t *device_control_local)
     
     for(idx = 0; idx < 20; idx++)
     {
-        port_mode = ((aio20_1_port_config[idx] & 0xf000) >> 12); 
+        port_mode = ((port_config & 0xf000) >> 12); 
         if((port_mode == MODE_7) || (port_mode == MODE_8))
         {
-            write_register(slot, (MAX11300RegAddress_t)(port_cfg_00 + idx), aio20_1_port_config[idx]);
+            write_register(slot, (MAX11300RegAddress_t)(port_cfg_00 + idx), port_config);
             pilot_delay_us(100);
         }
     }
@@ -467,13 +467,15 @@ void config_process_3(uint8_t slot)
 {
     uint8_t idx;
     uint16_t port_mode;
+    uint16_t port_config;
     
     for(idx = 0; idx < 20; idx++)
     {
-        port_mode = ((aio20_1_port_config[idx] & 0xf000) >> 12); 
+        port_config = get_aio20_port_config(slot, idx);
+        port_mode = ((port_config & 0xf000) >> 12); 
         if((port_mode == MODE_2) || (port_mode == MODE_11) || (port_mode == MODE_12))
         {
-            write_register(slot, (MAX11300RegAddress_t)(port_cfg_00 + idx), aio20_1_port_config[idx]);
+            write_register(slot, (MAX11300RegAddress_t)(port_cfg_00 + idx), port_config);
         }
     }
 }
@@ -487,12 +489,14 @@ void AIO20_init(uint8_t slot)
     
     uint8_t idx;
     uint8_t port_mode;
+    uint16_t port_config;
     uint16_t mode_bit_mask = 0;
     
     //figure out port modes used
     for(idx = 0; idx < 20; idx++)
     {
-        port_mode = ((aio20_1_port_config[idx] & 0xf000) >> 12);
+        port_config = get_aio20_port_config(slot, idx);
+        port_mode = ((port_config & 0xf000) >> 12);
         if(port_mode > 0)
         {
             mode_bit_mask |= (1 << port_mode);
