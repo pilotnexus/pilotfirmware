@@ -16,7 +16,7 @@ push your commit:
 `git push origin beta`
 
 push the tag:
-`git push gl 0.0.1-beta`
+`git push origin 0.0.1-beta`
 
 # publish firmware version
 
