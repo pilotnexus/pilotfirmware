@@ -32,8 +32,8 @@ m(name) ::= "m_<name>"
 O8(o8) ::= <<
 
 /* initializes the o8 module */
-void pilot_<o8.Name>_init(void);
-void pilot_<o8.Name>_check(void);
+int pilot_<o8.Name>_init(void);
+int pilot_<o8.Name>_check(void);
 
 /* send the value of the output to the rpi */
 uint8_t pilot_<o8.Name>_get_value(uint8_t output);

@@ -151,7 +151,7 @@ int pilot_$slcd.Name$_init()
   return 0;
 \}
 
-int pilot_$slcd.Name$_init()
+int pilot_$slcd.Name$_check()
 {
   return 0;
 \}

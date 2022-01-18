@@ -32,8 +32,8 @@ m(name) ::= "m_<name>"
 Demo(demo) ::= <<
 
 /* initializes the demo module */
-void pilot_<demo.Name>_init(void);
-void pilot_<demo.Name>_check(void);
+int pilot_<demo.Name>_init(void);
+int pilot_<demo.Name>_check(void);
 
 /* send the state of the input to the rpi */
 uint8_t pilot_<demo.Name>_get_state(uint8_t input);
