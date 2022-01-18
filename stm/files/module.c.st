@@ -15,6 +15,7 @@
 #include "onewire.h"
 #include "aio20.h"
 #include "fpga.h"
+#include "slcd.h"
 
 modules_t module_info, previous_module_info;
 
@@ -39,10 +40,10 @@ void pilot_modules_init()
 }
 
 //blanket implementations
-int32_t pilot_None_0_init() { return 0; }
-int32_t pilot_None_1_init() { return 0; }
-int32_t pilot_None_2_init() { return 0; }
-int32_t pilot_None_3_init() { return 0; }
+int pilot_None_0_init() { return 0; }
+int pilot_None_1_init() { return 0; }
+int pilot_None_2_init() { return 0; }
+int pilot_None_3_init() { return 0; }
 
 int32_t pilot_module_init(uint8_t slot)
 {
