@@ -3,6 +3,10 @@
 #include "delay.h"
 #include "stm32f10x_i2c.h"
 
+//Run in Overdrive mode
+//comment out this define to run in normal mode
+#define OVERDRIVE_EEPROM
+
 #define EEPROM_GPIO GPIOC
 // #define GPIO_Pin_0                 ((uint16_t)0x0001)  /* Pin 0 selected */
 // #define GPIO_Pin_1                 ((uint16_t)0x0002)  /* Pin 1 selected */
@@ -17,6 +21,7 @@
 */
 #define pilot_eeprom_module_to_pin(index) ((uint16_t)(index == 0) ? GPIO_Pin_2 : (module == 1) ? GPIO_Pin_0 : (module == 2) ? GPIO_Pin_3 : GPIO_Pin_1)
 
+#ifdef OVERDRIVE_EEPROM
 /* timings in microseconds for overdrive */
 #define EEPROM_DELAY_A 1.0 /* Write 1-bit (drive bus low) & Read-bit (drive bus low) */
 #define EEPROM_DELAY_B 7.5 /* Write 1-bit (after release bus) */
@@ -28,6 +33,23 @@
 #define EEPROM_DELAY_H 70  /* Reset (after drive low) */
 #define EEPROM_DELAY_I 8.5 /* Reset (after release bus) */
 #define EEPROM_DELAY_J 40  /* Reset (after sample presence pulse) */
+
+#define EEPROM_DELAY_RETRY 200  /* Retry waiting time */
+#else
+/* timings in microseconds for standard */
+#define EEPROM_DELAY_A 6   /* Write 1-bit (drive bus low) & Read-bit (drive bus low) */
+#define EEPROM_DELAY_B 64  /* Write 1-bit (after release bus) */
+#define EEPROM_DELAY_C 60  /* Write 0-bit (drive bus low) */
+#define EEPROM_DELAY_D 10  /* Write 0-bit (after release bus) */
+#define EEPROM_DELAY_E 9   /* Read Bit (after release bus) */
+#define EEPROM_DELAY_F 55  /* Read Bit (after sample read bit) */
+#define EEPROM_DELAY_G 0   /* Reset (before drive low) */
+#define EEPROM_DELAY_H 480 /* Reset (after drive low) */
+#define EEPROM_DELAY_I 70  /* Reset (after release bus) */
+#define EEPROM_DELAY_J 410 /* Reset (after sample presence pulse) */
+
+#define EEPROM_DELAY_RETRY 1000  /* Retry waiting time */
+#endif
 
 /* rom commands */
 typedef enum {
@@ -126,6 +148,27 @@ __STATIC_INLINE void pilot_eeprom_set_pin_direction(module_slot_t module, pin_di
 
 #define pilot_eeprom_set_1w(module, high) GPIO_WriteBit(EEPROM_GPIO, pilot_eeprom_module_to_pin(module), high ? Bit_SET : Bit_RESET)
 
+// CRC-8 used in UID
+uint8_t crc8( uint8_t *addr, uint8_t len)
+{
+      uint8_t crc=0;
+      
+      for (uint8_t i=0; i<len;i++) 
+      {
+            uint8_t inbyte = addr[i];
+            for (uint8_t j=0;j<8;j++) 
+            {
+                  uint8_t mix = (crc ^ inbyte) & 0x01;
+                  crc >>= 1;
+                  if (mix) 
+                        crc ^= 0x8C;
+                  
+                  inbyte >>= 1;
+            }
+      }
+      return crc;
+}
+
 /* get checksum */
 static uint8_t calculate_checksum(uint8_t * data, uint32_t length) 
 {
@@ -208,9 +251,9 @@ static bool pilot_eeprom_reset(module_slot_t module)
 
   /* release bus for I microseconds  */
   pilot_eeprom_set_1w(module, true);
-  pilot_eeprom_set_pin_direction(module, pin_direction_input);
   pilot_eeprom_delay_us(EEPROM_DELAY_I);
 
+  pilot_eeprom_set_pin_direction(module, pin_direction_input);
   /* sample bus: 0 = device present, 1 = no device present */
   slave_present = !GPIO_ReadInputDataBit(EEPROM_GPIO, pilot_eeprom_module_to_pin(module));
 
@@ -247,60 +290,79 @@ static void pilot_eeprom_read_byte(module_slot_t module, uint8_t *rx)
 /* poll the eeprom uid */
 bool pilot_eeprom_get_module_uid(module_slot_t module, pilot_eeprom_uid_t *uid)
 {
-  int i;
+  int i, j, retries=20;
   bool ret;
+  uint8_t crc;
 
-  /* send reset pulse */
-  ret = pilot_eeprom_reset(module);
+  for(j=0; j<retries; j++) {
+    /* send reset pulse */
+    pilot_eeprom_reset(module);
 
-  /* send read rom command */
-  pilot_eeprom_write_byte(module, (uint8_t)pilot_eeprom_rom_cmd_read_rom);
+    /* send read rom command */
+    pilot_eeprom_write_byte(module, (uint8_t)pilot_eeprom_rom_cmd_read_rom);
 
-  /* read the rom from the LSB in */
-  for (i = 0; i < EEPROM_UID_LENGTH; i++)
-    pilot_eeprom_read_byte(module, uid->uid + EEPROM_UID_LENGTH - 1 - i);
+    /* read the rom from the LSB in */
+    for (i = 0; i < EEPROM_UID_LENGTH; i++)
+      pilot_eeprom_read_byte(module, &uid->uid[i]);
+
+    crc = crc8(uid->uid, EEPROM_UID_LENGTH - 1);
+    if (crc == uid->uid[EEPROM_UID_LENGTH-1])
+    {
+      ret = true;
+      break;
+    }
+    else
+      ret = false;
+  }
 
   return ret;
 }
 
-/* reads the eeprom memory over 1-wire */
+/* reads the eeprom memory over 1-wire 
+ * returns true if the read was successful (checksum matches)
+*/
 static bool pilot_eeprom_read_memory(module_slot_t module, uint8_t address, uint8_t *rx, int32_t length, bool checksum)
 {
   int i;
-  const int max_tries = 10;
-  int try_count = 0;
-  bool ret = true;
+  bool ret = true, all_ff = true, is_err = true;
+  uint8_t err_pattern[] = { 0xaa, 0xaa, 0x55, 0x55, 0xaa, 0xaa, 0x55 };
 
-  do {
-    /* send the 'read' command code */
-    pilot_eeprom_write_byte(module, (uint8_t)pilot_eeprom_mem_cmd_read);
+  /* send the 'read' command code */
+  pilot_eeprom_write_byte(module, (uint8_t)pilot_eeprom_mem_cmd_read);
 
-    /* transmit 16-bit starting address */
-    pilot_eeprom_write_byte(module, address); /* bit7 = 0, bit6...bit0 hold the address */
-    pilot_eeprom_write_byte(module, 0x00);    /* must be 00 to be valid */
+  /* transmit 16-bit starting address */
+  pilot_eeprom_write_byte(module, address); /* bit7 = 0, bit6...bit0 hold the address */
+  pilot_eeprom_write_byte(module, 0x00);    /* must be 00 to be valid */
 
-    /* read the response */
-    for (i = 0; i < length; i++)
-      pilot_eeprom_read_byte(module, rx + i);
+  /* read the response */
+  for (i = 0; i < length; i++)
+    pilot_eeprom_read_byte(module, rx + i);
 
-    /* reset when done */
-    pilot_eeprom_reset(module);
+  /* reset when done */
+  pilot_eeprom_reset(module);
 
-    /* validate checksum if set */
-    if (checksum == true)
+  /* check if all is 0xFF (checksum cannot find this special case) */
+  for (i = 0; i < length; i++)
+    if (rx[i] != 0xFF)
+      all_ff = false;
+
+  for (i = 0; i < sizeof(err_pattern); i++)
+    if (rx[i] != err_pattern[i])
+      is_err = false;
+
+  /* validate checksum if set */
+  if (all_ff || is_err)
+    ret = false;
+  else if (checksum == true)
+  {
+    if (calculate_checksum(rx, length-1) == rx[length-1])
     {
-      if (calculate_checksum(rx, length-1) == rx[length-1])
-      {
-        rx[length-1] = 0x20; //set checksum to ' ' (space) after verification
-        ret = true;
-      }
-      else
-        ret = false;
+      rx[length-1] = 0x20; //set checksum to ' ' (space) after verification
+      ret = true;
     }
-    
-    try_count++;
-
-  } while (try_count < max_tries && ret == false);
+    else
+      ret = false;
+  }
 
   return ret;
 }
@@ -310,13 +372,13 @@ static bool pilot_eeprom_write_memory(module_slot_t module, uint8_t address, uin
 {
   uint8_t i=0;
   uint8_t cs, b0_verification, b1_verification;
-  const int max_tries = 10;
+  const int max_tries = 20;
   int try_count = 0;
 
   /* write checksum to last byte if set */
   if (checksum == true)
     data[length-1] = calculate_checksum(data, length-1);
-       
+
   /* send the 'write memory' command code */
   pilot_eeprom_write_byte(module, (uint8_t)pilot_eeprom_mem_cmd_write);
 
@@ -356,10 +418,28 @@ static bool pilot_eeprom_write_memory(module_slot_t module, uint8_t address, uin
   return i >= length;
 }
 
-/* poll the eeprom hid */
-void pilot_eeprom_get_module_fid(module_slot_t module, pilot_eeprom_fid_t *fid)
+bool pilot_eeprom_get_module_data(module_slot_t module, uint8_t addr, uint8_t *data, bool checksum)
 {
-  pilot_eeprom_read_memory(module, (uint8_t)pilot_eeprom_mem_address_fid, fid->data, EEPROM_DATA_LENGTH, true);
+    bool success = false;
+    int i, retries=20, retry_delay=EEPROM_DELAY_RETRY; 
+    pilot_eeprom_uid_t uid;
+
+    for(i=0; i<retries; i++)
+        if (pilot_eeprom_get_module_uid(module, &uid))
+        {
+            success = pilot_eeprom_read_memory(module, addr, data, EEPROM_DATA_LENGTH, checksum);
+            if (success)
+              break;
+            pilot_eeprom_delay_us(EEPROM_DELAY_RETRY);
+            retry_delay += EEPROM_DELAY_RETRY;
+        }
+    return success;
+}
+
+/* poll the eeprom hid */
+bool pilot_eeprom_get_module_fid(module_slot_t module, pilot_eeprom_fid_t *fid)
+{
+  return pilot_eeprom_get_module_data(module, (uint8_t)pilot_eeprom_mem_address_fid, fid->data, true);
 }
 
 /* write the eeprom fid */
@@ -369,10 +449,9 @@ bool pilot_eeprom_set_module_fid(module_slot_t module, pilot_eeprom_fid_t *fid)
 }
 
 /* poll the eeprom hid - get uid needs to be called before! */
-void pilot_eeprom_get_module_hid(module_slot_t module, pilot_eeprom_hid_t *hid)
+bool pilot_eeprom_get_module_hid(module_slot_t module, pilot_eeprom_hid_t *hid)
 {
-  /* read the hid from the memory */
-  pilot_eeprom_read_memory(module, (uint8_t)pilot_eeprom_mem_address_hid, hid->data, EEPROM_DATA_LENGTH, true);
+  return pilot_eeprom_get_module_data(module, (uint8_t)pilot_eeprom_mem_address_hid, hid->data, true);
 }
 
 /* write the eeprom hid */
@@ -386,9 +465,9 @@ bool pilot_eeprom_set_module_hid(module_slot_t module, pilot_eeprom_hid_t *hid)
 }
 
 /* poll the user data from the eeprom */
-void pilot_eeprom_get_module_userdata(module_slot_t module, int data_index, pilot_eeprom_data_t *data)
+bool pilot_eeprom_get_module_userdata(module_slot_t module, int data_index, pilot_eeprom_data_t *data)
 {
-  pilot_eeprom_read_memory(module, (uint8_t)pilot_eeprom_mem_address_user + (8*data_index), data->data, EEPROM_DATA_LENGTH, false);
+  return pilot_eeprom_get_module_data(module, (uint8_t)pilot_eeprom_mem_address_user + (8*data_index), data->data, false);
 }
 
 /* write the user data to the eeprom */

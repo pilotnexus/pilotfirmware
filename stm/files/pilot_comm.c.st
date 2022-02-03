@@ -1117,6 +1117,8 @@ static void pilot_comm_get_uid(module_slot_t module_slot)
   pilot_comm_send_cmd(&cmd);
 }
 
+// Reads HID from EEPROM
+// If an error occurs reading from the EEPROM, the HID array is set to 0x00
 static void pilot_comm_get_hid(module_slot_t module_slot)
 {
   int i; pilot_cmd_t cmd; pilot_eeprom_hid_t hid; pilot_eeprom_uid_t uid;
@@ -1126,12 +1128,9 @@ static void pilot_comm_get_hid(module_slot_t module_slot)
   cmd.target = target_t_from_module_slot_and_port(module_slot, module_port_1);
   cmd.type = pilot_cmd_type_eeprom_hid_get;
 
-  /* every mem cmd must start with an rom cmd */
-  if (pilot_eeprom_get_module_uid(module_slot, &uid))
-  {
     /* read the hid from the module's eeprom */
-    pilot_eeprom_get_module_hid(module_slot, &hid);
-
+  if (pilot_eeprom_get_module_hid(module_slot, &hid))
+  {
     /* encode the hid in the cmd data */
     for (i = 0; i < pilot_cmd_t_data_size && i < EEPROM_HID_LENGTH; i++)
       cmd.data[i] = hid.data[i];
@@ -1159,25 +1158,23 @@ static void pilot_comm_set_hid(module_slot_t module_slot, pilot_cmd_t *cmd)
   pilot_eeprom_set_module_hid(module_slot, &hid);
 }
 
+// Reads FID from EEPROM
+// If an error occurs reading from the EEPROM, the FID array is set to 0x00
 static void pilot_comm_get_fid(module_slot_t module_slot)
 {
-  int i; pilot_cmd_t cmd; pilot_eeprom_fid_t fid; pilot_eeprom_uid_t uid;
+  int i; pilot_cmd_t cmd; pilot_eeprom_fid_t fid;
 
   /* setup the cmd */
   memset(&cmd, 0, sizeof(pilot_cmd_t));
   cmd.target = target_t_from_module_slot_and_port(module_slot, module_port_1);
   cmd.type = pilot_cmd_type_eeprom_fid_get;
 
-  /* every mem cmd must start with an rom cmd */
-  if (pilot_eeprom_get_module_uid(module_slot, &uid))
-  {
-    /* read the fid from the module's eeprom */
-    pilot_eeprom_get_module_fid(module_slot, &fid);
-
+  /* read the fid from the module's eeprom */
+  if (pilot_eeprom_get_module_fid(module_slot, &fid)) {
     /* encode the fid in the cmd data */
     for (i = 0; i < pilot_cmd_t_data_size && i < EEPROM_FID_LENGTH; i++)
       cmd.data[i] = fid.data[i];
-  }
+  } 
 
   /* send the reply */
   cmd.length = MSG_LEN(EEPROM_FID_LENGTH);
