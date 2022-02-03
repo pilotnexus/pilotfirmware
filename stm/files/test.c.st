@@ -1,6 +1,7 @@
 #include "test.h"
 #include "delay.h"
 #include <stdio.h>
+#include <string.h>
 #include <stm32_conf.h>
 
 $if(model.IsTest)$
