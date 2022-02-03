@@ -290,7 +290,7 @@ static void pilot_eeprom_read_byte(module_slot_t module, uint8_t *rx)
 /* poll the eeprom uid */
 bool pilot_eeprom_get_module_uid(module_slot_t module, pilot_eeprom_uid_t *uid)
 {
-  int i, j, retries=20;
+  int i, j, retries=3;
   bool ret;
   uint8_t crc;
 
@@ -372,48 +372,54 @@ static bool pilot_eeprom_write_memory(module_slot_t module, uint8_t address, uin
 {
   uint8_t i=0;
   uint8_t cs, b0_verification, b1_verification;
-  const int max_tries = 20;
+  pilot_eeprom_uid_t uid;
+
+  const int max_tries = 2;
   int try_count = 0;
 
   /* write checksum to last byte if set */
   if (checksum == true)
     data[length-1] = calculate_checksum(data, length-1);
 
-  /* send the 'write memory' command code */
-  pilot_eeprom_write_byte(module, (uint8_t)pilot_eeprom_mem_cmd_write);
-
-  pilot_eeprom_write_byte(module, address); /* send parameter byte */
-  pilot_eeprom_write_byte(module, 0xFF);    /* send 0xFF byte */
-
-  while (i < length && try_count < max_tries)
+  /* every mem cmd must start with the an rom cmd */
+  if (pilot_eeprom_get_module_uid(module, &uid)) 
   {
-    /* write 2 data bytes */
-    pilot_eeprom_write_byte(module, data[i+0]);
-    pilot_eeprom_write_byte(module, data[i+1]);
-
-    /* read back the 2 data bytes */
-    pilot_eeprom_read_byte(module, &b0_verification);
-    pilot_eeprom_read_byte(module, &b1_verification);
-
-    /* if verifying the bytes works... */
-    if (data[i+0] == b0_verification && 
-        data[i+1] == b1_verification)
+    /* send the 'write memory' command code */
+    pilot_eeprom_write_byte(module, (uint8_t)pilot_eeprom_mem_cmd_write);
+  
+    pilot_eeprom_write_byte(module, address); /* send parameter byte */
+    pilot_eeprom_write_byte(module, 0xFF);    /* send 0xFF byte */
+  
+    while (i < length && try_count < max_tries)
     {
-      pilot_eeprom_write_byte(module, 0xFF); /* ...send the release byte */
-      pilot_delay_ms(16);                    /* wait tProg (programming time for a 16-bit segment) */
-      pilot_eeprom_read_byte(module, &cs);   /* read the CS byte */
-      if (cs == pilot_eeprom_mem_cmd_write_result_success) /* check if writing worked */
-        i += 2;
-    }
-    else
-    {
-      pilot_eeprom_write_byte(module, 0x00); /* not ok */
-      try_count++;
-    }
+      /* write 2 data bytes */
+      pilot_eeprom_write_byte(module, data[i+0]);
+      pilot_eeprom_write_byte(module, data[i+1]);
+  
+      /* read back the 2 data bytes */
+      pilot_eeprom_read_byte(module, &b0_verification);
+      pilot_eeprom_read_byte(module, &b1_verification);
+  
+      /* if verifying the bytes works... */
+      if (data[i+0] == b0_verification && 
+          data[i+1] == b1_verification)
+      {
+        pilot_eeprom_write_byte(module, 0xFF); /* ...send the release byte */
+        pilot_delay_ms(16);                    /* wait tProg (programming time for a 16-bit segment) */
+        pilot_eeprom_read_byte(module, &cs);   /* read the CS byte */
+        if (cs == pilot_eeprom_mem_cmd_write_result_success) /* check if writing worked */
+          i += 2;
+      }
+      else
+      {
+        pilot_eeprom_write_byte(module, 0x00); /* not ok */
+        try_count++;
+      }
+    } 
+
+    /* reset when done */
+    pilot_eeprom_reset(module);
   }
-
-  /* reset when done */
-  pilot_eeprom_reset(module);
 
   return i >= length;
 }
@@ -457,11 +463,7 @@ bool pilot_eeprom_get_module_hid(module_slot_t module, pilot_eeprom_hid_t *hid)
 /* write the eeprom hid */
 bool pilot_eeprom_set_module_hid(module_slot_t module, pilot_eeprom_hid_t *hid)
 {
-  bool ret = false;
-
-  ret = pilot_eeprom_write_memory(module, (uint8_t)pilot_eeprom_mem_address_hid, hid->data, EEPROM_DATA_LENGTH, true);
-
-  return ret;
+  return pilot_eeprom_write_memory(module, (uint8_t)pilot_eeprom_mem_address_hid, hid->data, EEPROM_DATA_LENGTH, true);
 }
 
 /* poll the user data from the eeprom */

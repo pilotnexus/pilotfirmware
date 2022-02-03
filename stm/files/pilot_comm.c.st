@@ -1095,6 +1095,42 @@ static void pilot_comm_get_board_uid()
   pilot_comm_send_cmd(&cmd);
 }
 
+// Reads HID from EEPROM
+// If an error occurs reading from the EEPROM, the HID array is set to 0x00
+static void pilot_comm_get_hid(module_slot_t module_slot)
+{
+  int i; pilot_cmd_t cmd; pilot_eeprom_hid_t hid; 
+  /* setup the cmd */
+  memset(&cmd, 0, sizeof(pilot_cmd_t));
+  cmd.target = target_t_from_module_slot_and_port(module_slot, module_port_1);
+  cmd.type = pilot_cmd_type_eeprom_hid_get;
+
+    /* read the hid from the module's eeprom */
+  if (pilot_eeprom_get_module_hid(module_slot, &hid))
+  {
+    /* encode the hid in the cmd data */
+    for (i = 0; i < pilot_cmd_t_data_size && i < EEPROM_HID_LENGTH; i++)
+      cmd.data[i] = hid.data[i];
+  }
+
+  /* send the reply */
+  cmd.length = MSG_LEN(EEPROM_HID_LENGTH);
+  pilot_comm_send_cmd(&cmd);
+}
+
+static void pilot_comm_set_hid(module_slot_t module_slot, pilot_cmd_t *cmd)
+{
+  pilot_eeprom_hid_t hid;
+  int i; 
+
+  /* decode the hid from the cmd data */
+  for (i = 0; i < pilot_cmd_t_data_size && i < EEPROM_HID_LENGTH; i++)
+    hid.data[i] = cmd->data[i];
+
+  /* try to set the hid of module */
+  pilot_eeprom_set_module_hid(module_slot, &hid);
+}
+
 static void pilot_comm_get_uid(module_slot_t module_slot)
 {
   int i; pilot_cmd_t cmd; pilot_eeprom_uid_t uid;
@@ -1117,64 +1153,23 @@ static void pilot_comm_get_uid(module_slot_t module_slot)
   pilot_comm_send_cmd(&cmd);
 }
 
-// Reads HID from EEPROM
-// If an error occurs reading from the EEPROM, the HID array is set to 0x00
-static void pilot_comm_get_hid(module_slot_t module_slot)
-{
-  int i; pilot_cmd_t cmd; pilot_eeprom_hid_t hid; pilot_eeprom_uid_t uid;
-
-  /* setup the cmd */
-  memset(&cmd, 0, sizeof(pilot_cmd_t));
-  cmd.target = target_t_from_module_slot_and_port(module_slot, module_port_1);
-  cmd.type = pilot_cmd_type_eeprom_hid_get;
-
-    /* read the hid from the module's eeprom */
-  if (pilot_eeprom_get_module_hid(module_slot, &hid))
-  {
-    /* encode the hid in the cmd data */
-    for (i = 0; i < pilot_cmd_t_data_size && i < EEPROM_HID_LENGTH; i++)
-      cmd.data[i] = hid.data[i];
-  }
-
-  /* send the reply */
-  cmd.length = MSG_LEN(EEPROM_HID_LENGTH);
-  pilot_comm_send_cmd(&cmd);
-}
-
-static void pilot_comm_set_hid(module_slot_t module_slot, pilot_cmd_t *cmd)
-{
-  pilot_eeprom_uid_t uid;
-  pilot_eeprom_hid_t hid;
-  int i; 
-
-  /* decode the hid from the cmd data */
-  for (i = 0; i < pilot_cmd_t_data_size && i < EEPROM_HID_LENGTH; i++)
-    hid.data[i] = cmd->data[i];
-
-  /* every mem cmd must start with the an rom cmd */
-  pilot_eeprom_get_module_uid(module_slot, &uid);
-
-  /* try to set the hid of module */
-  pilot_eeprom_set_module_hid(module_slot, &hid);
-}
-
 // Reads FID from EEPROM
 // If an error occurs reading from the EEPROM, the FID array is set to 0x00
 static void pilot_comm_get_fid(module_slot_t module_slot)
 {
-  int i; pilot_cmd_t cmd; pilot_eeprom_fid_t fid;
-
+  int i; pilot_cmd_t cmd; pilot_eeprom_fid_t fid; 
   /* setup the cmd */
   memset(&cmd, 0, sizeof(pilot_cmd_t));
   cmd.target = target_t_from_module_slot_and_port(module_slot, module_port_1);
   cmd.type = pilot_cmd_type_eeprom_fid_get;
 
-  /* read the fid from the module's eeprom */
-  if (pilot_eeprom_get_module_fid(module_slot, &fid)) {
+    /* read the fid from the module's eeprom */
+  if (pilot_eeprom_get_module_fid(module_slot, &fid))
+  {
     /* encode the fid in the cmd data */
     for (i = 0; i < pilot_cmd_t_data_size && i < EEPROM_FID_LENGTH; i++)
       cmd.data[i] = fid.data[i];
-  } 
+  }
 
   /* send the reply */
   cmd.length = MSG_LEN(EEPROM_FID_LENGTH);
@@ -1183,7 +1178,6 @@ static void pilot_comm_get_fid(module_slot_t module_slot)
 
 static void pilot_comm_set_fid(module_slot_t module_slot, pilot_cmd_t *cmd)
 {
-  pilot_eeprom_uid_t uid;
   pilot_eeprom_fid_t fid;
   int i; 
 
@@ -1191,26 +1185,19 @@ static void pilot_comm_set_fid(module_slot_t module_slot, pilot_cmd_t *cmd)
   for (i = 0; i < pilot_cmd_t_data_size && i < EEPROM_FID_LENGTH; i++)
     fid.data[i] = cmd->data[i];
 
-  /* every mem cmd must start with the rom cmd */
-  pilot_eeprom_get_module_uid(module_slot, &uid);
-
   /* try to set the fid of module */
   pilot_eeprom_set_module_fid(module_slot, &fid);
 }
 
 static void pilot_comm_get_eeprom_userdata(module_slot_t module_slot, const pilot_cmd_t *cmd)
 {
-  int i; pilot_cmd_t reply; pilot_eeprom_uid_t uid; pilot_eeprom_data_t data;
+  int i; pilot_cmd_t reply; pilot_eeprom_data_t data;
 
   /* get the user data index */
   int data_index = cmd->data[pilot_eeprom_userdata_index_number];
 
-  /* every mem cmd must start with an rom cmd */
-  if (pilot_eeprom_get_module_uid(module_slot, &uid))
-  {
-    /* read the user data from the module's eeprom */
-    pilot_eeprom_get_module_userdata(module_slot, data_index, &data);
-  }
+  /* read the user data from the module's eeprom */
+  pilot_eeprom_get_module_userdata(module_slot, data_index, &data);
 
   /* setup the reply */
   memset(&reply, 0, sizeof(pilot_cmd_t));
@@ -1237,9 +1224,6 @@ static void pilot_comm_set_eeprom_userdata(const pilot_cmd_t *cmd)
   /* get the user data from the cmd */
   for (i = 0; i < pilot_cmd_t_data_size && i < EEPROM_DATA_LENGTH; i++)
     data.data[i] = cmd->data[i];
-
-  /* every mem cmd must start with the rom cmd */
-  pilot_eeprom_get_module_uid(module_slot, &uid);
 
   /* try to set the user data block */
   pilot_eeprom_set_module_userdata(module_slot, data_index, &data);
