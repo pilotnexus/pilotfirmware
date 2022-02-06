@@ -9,7 +9,7 @@
 #include "o8.h"
 #include "demo.h"
 #include "io16.h"
-#include "ia8.h"
+#include "ai8.h"
 #include "fpga.h"
 #include "gps.h"
 #include "gsm.h"
@@ -765,8 +765,8 @@ static void pilot_pilot_comm_get_input_state_cmd(module_slot_t slot, uint8_t inp
     $model.I8s:{i8|case $i8.Slot$: value = $i8.Name$_get_state(input); break;};separator="\n"$
     $model.O8s:{o8|case $o8.Slot$: value = (uint32_t)pilot_$o8.Name$_get_value(input); break;};separator="\n"$
     $model.Demos:{demo|case $demo.Slot$: value = pilot_$demo.Name$_get_state(input); break;};separator="\n"$
-    $model.IA8s:{ia8|case $ia8.Slot$:
-      pilot_$ia8.Name$_get_value(input, &ia_value);
+    $model.IA8s:{ai8|case $ai8.Slot$:
+      pilot_$ai8.Name$_get_value(input, &ia_value);
       value = ia_value;
       break;
     };separator="\n"$

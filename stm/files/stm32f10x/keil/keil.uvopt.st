@@ -370,8 +370,8 @@
       <TopLine>0</TopLine>
       <CurrentLine>0</CurrentLine>
       <bDave2>0</bDave2>
-      <PathWithFileName>.\ia8.h</PathWithFileName>
-      <FilenameWithoutPath>ia8.h</FilenameWithoutPath>
+      <PathWithFileName>.\ai8.h</PathWithFileName>
+      <FilenameWithoutPath>ai8.h</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>
@@ -386,8 +386,8 @@
       <TopLine>0</TopLine>
       <CurrentLine>0</CurrentLine>
       <bDave2>0</bDave2>
-      <PathWithFileName>.\ia8.c</PathWithFileName>
-      <FilenameWithoutPath>ia8.c</FilenameWithoutPath>
+      <PathWithFileName>.\ai8.c</PathWithFileName>
+      <FilenameWithoutPath>ai8.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>

@@ -48,7 +48,7 @@
     <ClCompile Include="..\i8.c">
       <Filter>Source files</Filter>
     </ClCompile>
-    <ClCompile Include="..\ia8.c">
+    <ClCompile Include="..\ai8.c">
       <Filter>Source files</Filter>
     </ClCompile>
     <ClCompile Include="..\io16.c">
@@ -278,7 +278,7 @@
     <ClInclude Include="..\i8.h">
       <Filter>Header files</Filter>
     </ClInclude>
-    <ClInclude Include="..\ia8.h">
+    <ClInclude Include="..\ai8.h">
       <Filter>Header files</Filter>
     </ClInclude>
     <ClInclude Include="..\io16.h">

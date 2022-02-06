@@ -512,14 +512,14 @@
               <FilePath>.\gsm.c</FilePath>
             </File>
             <File>
-              <FileName>ia8.h</FileName>
+              <FileName>ai8.h</FileName>
               <FileType>5</FileType>
-              <FilePath>.\ia8.h</FilePath>
+              <FilePath>.\ai8.h</FilePath>
             </File>
             <File>
-              <FileName>ia8.c</FileName>
+              <FileName>ai8.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\ia8.c</FilePath>
+              <FilePath>.\ai8.c</FilePath>
             </File>
             <File>
               <FileName>onewire.h</FileName>

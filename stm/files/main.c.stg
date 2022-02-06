@@ -52,7 +52,7 @@ Render(model) ::= <<
 #include "gpio_config.h"
 #include "delay.h"
 #include "it_callback.h"
-#include "ia8.h"
+#include "ai8.h"
 #include "pilot_comm.h"
 #include "usart.h"
 #include "pwm.h"

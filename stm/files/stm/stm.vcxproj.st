@@ -76,7 +76,7 @@
     <ClCompile Include="..\gps.c" />
     <ClCompile Include="..\gsm.c" />
     <ClCompile Include="..\i8.c" />
-    <ClCompile Include="..\ia8.c" />
+    <ClCompile Include="..\ai8.c" />
     <ClCompile Include="..\io16.c" />
     <ClCompile Include="..\o8.c" />
     <ClCompile Include="..\onewire.c" />
@@ -154,7 +154,7 @@
     <ClInclude Include="..\gps.h" />
     <ClInclude Include="..\gsm.h" />
     <ClInclude Include="..\i8.h" />
-    <ClInclude Include="..\ia8.h" />
+    <ClInclude Include="..\ai8.h" />
     <ClInclude Include="..\io16.h" />
     <ClInclude Include="..\io_stm.h" />
     <ClInclude Include="..\it_callback.h" />

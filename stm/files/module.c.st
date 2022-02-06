@@ -3,7 +3,7 @@
 #include "pilot_comm.h"
 #include "pilot_uart.h"
 #include "delay.h"
-#include "ia8.h"
+#include "ai8.h"
 #include "pwm.h"
 #include "i8.h"
 #include "o8.h"
