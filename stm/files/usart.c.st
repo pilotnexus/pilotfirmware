@@ -142,5 +142,17 @@ void pilot_$usart.Name$_init()
   pilot_$usart.Name$_configure_init();
   pilot_$usart.Name$_configure_interrupt();
 \}
+};separator="\n"$
+
+$model.Modules:{module|
+$if(module.Port1)$
+int pilot_$module.Name$_$module.Slot$_init(void) 
+{
+\}
+
+int pilot_$module.Name$_$module.Slot$_check(void)
+{
+\}
+$endif$
 
 };separator="\n"$

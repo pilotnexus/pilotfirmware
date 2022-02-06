@@ -16,6 +16,7 @@
 #include "aio20.h"
 #include "fpga.h"
 #include "slcd.h"
+#include "usart.h"
 
 modules_t module_info, previous_module_info;
 

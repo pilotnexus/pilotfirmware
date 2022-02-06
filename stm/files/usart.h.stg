@@ -47,9 +47,22 @@ void pilot_<usart.Name>_set_wordlength(uint16_t wordlength);
 
 >>
 
+Module(module) ::= <<
+int pilot_<module.Name>_<module.Slot>_init(void);
+
+int pilot_<module.Name>_<module.Slot>_check(void);
+
+>>
+
 RenderBody(model) ::= <<
 
 #include "stm32_conf.h"
+
+<model.Modules:{module|
+<if(module.Port1)>
+<Module(module)>
+<endif>
+}>
 
 <model.Usarts:{usart|<Usart(usart)>}>
 
