@@ -179,7 +179,7 @@ int pilot_$io16.Name$_get_value(uint8_t io, uint8_t *value)
     {
       if (io < 8) 
         reg = pilot_io16_register_output_register_A;
-      else if (io > 8 && io < 16)
+      else if (io >= 8 && io < 16)
         reg = pilot_io16_register_output_register_B;
       else
         ret = 1;
@@ -188,7 +188,7 @@ int pilot_$io16.Name$_get_value(uint8_t io, uint8_t *value)
     {
       if (io < 8)
         reg = pilot_io16_register_input_register_A;
-      else if (io > 8 && io < 16)
+      else if (io >= 8 && io < 16)
         reg = pilot_io16_register_input_register_B;
       else
         ret = 1;
