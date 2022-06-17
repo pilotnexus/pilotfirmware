@@ -44,7 +44,7 @@ default: $(OBJS)
 
 rust: CCFLAGS+=-DEXTERNAL_PLC 
 rust: $(OBJS) 
-	$(CC) $(LDFLAGS) $(OBJS) -L..${S}..${S}lib${S} -lpilot -o stm.axf
+	$(CC) $(LDFLAGS) $(OBJS) -L..${S}..${S}lib${S} -lpilot -Wl,--print-memory-usage -o stm.axf
 	$(OBJCOPY) -O binary stm.axf stm.bin
 
 lib: $(OBJS)
